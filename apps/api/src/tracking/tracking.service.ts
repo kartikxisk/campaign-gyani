@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ResultStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
+import { hmacSign, safeStringEqual } from '../auth/crypto.util';
 import { SettingsService } from '../settings/settings.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
@@ -21,7 +22,7 @@ export class TrackingService {
     private readonly prisma: PrismaService,
     private readonly render: RenderService,
     private readonly settings: SettingsService,
-    @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL'>,
+    @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>,
   ) {}
 
   private async bump(resultId: string, current: string, target: ResultStatus): Promise<void> {
@@ -38,16 +39,24 @@ export class TrackingService {
     await this.bump(result.id, result.status, ResultStatus.OPENED);
   }
 
-  async recordClick(rid: string, meta: ClientMeta, originalUrl?: string): Promise<string> {
+  async recordClick(rid: string, meta: ClientMeta, originalUrl?: string, sig?: string): Promise<string> {
     const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
     if (!result) throw new NotFoundException();
     await this.prisma.campaignEvent.create({ data: { resultId: result.id, type: 'CLICKED', ip: meta.ip, userAgent: meta.userAgent } });
     await this.bump(result.id, result.status, ResultStatus.CLICKED);
     // Email mode has no landing page: send the recipient to the real URL the
-    // author linked. Phishing mode routes to the hosted landing page.
+    // author linked — but only if its signature matches, so the endpoint can't
+    // be used as an open redirect. Phishing mode routes to the landing page.
     const mode = await this.settings.getMode();
     if (mode === 'email') {
-      if (originalUrl && /^https?:\/\//i.test(originalUrl)) return originalUrl;
+      if (
+        originalUrl &&
+        sig &&
+        /^https?:\/\//i.test(originalUrl) &&
+        safeStringEqual(sig, hmacSign(`${rid}|${originalUrl}`, this.env.SESSION_SECRET))
+      ) {
+        return originalUrl;
+      }
       return this.env.PUBLIC_BASE_URL;
     }
     return `${this.env.PUBLIC_BASE_URL}/v/${rid}`;

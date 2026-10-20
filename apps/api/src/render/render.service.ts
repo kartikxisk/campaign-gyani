@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
 import type { MergeContext } from '@cg/shared';
+import { hmacSign } from '../auth/crypto.util';
 
 // Matches a well-formed Go-style token: {{ .FieldName }}. An unclosed `{{.`
 // does not match and is left as literal text.
@@ -29,7 +30,7 @@ function safeUrl(v: string): string {
 
 @Injectable()
 export class RenderService {
-  constructor(@Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL'>) {}
+  constructor(@Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>) {}
 
   /** The tracked click URL that records a CLICK then redirects to the landing page. */
   clickUrl(rid: string): string {
@@ -52,9 +53,14 @@ export class RenderService {
   }
 
   /** Rewrites anchor hrefs to the tracked click URL, preserving the original as ?u=. */
+  /** Signs a redirect target so the public click endpoint can't be abused as an open redirect. */
+  signUrl(rid: string, url: string): string {
+    return hmacSign(`${rid}|${url}`, this.env.SESSION_SECRET);
+  }
+
   rewriteLinks(html: string, rid: string): string {
     return html.replace(/(<a\b[^>]*?\bhref=)(["'])(.*?)\2/gi, (_m, pre: string, q: string, href: string) => {
-      const tracked = `${this.clickUrl(rid)}?u=${encodeURIComponent(href)}`;
+      const tracked = `${this.clickUrl(rid)}?u=${encodeURIComponent(href)}&s=${this.signUrl(rid, href)}`;
       return `${pre}${q}${tracked}${q}`;
     });
   }

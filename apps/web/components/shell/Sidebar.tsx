@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@cg/ui';
 import { Icon } from './icons';
 import { NAV_GROUPS } from './nav';
+import { useMode } from '@/lib/mode';
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -11,9 +12,11 @@ function isActive(pathname: string, href: string): boolean {
 
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { mode } = useMode();
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !(mode === 'email' && i.href === '/landing-pages')) })).filter((g) => g.items.length > 0);
   return (
     <nav className="flex-1 space-y-6 px-3 py-4">
-      {NAV_GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.heading}>
           <div className="px-3 pb-1.5 text-[11px] font-medium text-deck-muted/70">{group.heading}</div>
           <div className="space-y-0.5">

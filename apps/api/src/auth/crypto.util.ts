@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 
 // Lazily-computed real dummy hash so authenticating a missing user still runs a
@@ -24,6 +24,10 @@ export async function verifyPassword(hashed: string, plain: string): Promise<boo
 /** Runs a verify against a real dummy hash to burn comparable time for a missing user. */
 export async function burnVerify(plain: string): Promise<void> {
   await verifyPassword(await getDummyHash(), plain);
+}
+
+export function hmacSign(data: string, key: string): string {
+  return createHmac('sha256', key).update(data).digest('hex').slice(0, 32);
 }
 
 export function safeStringEqual(a: string, b: string): boolean {

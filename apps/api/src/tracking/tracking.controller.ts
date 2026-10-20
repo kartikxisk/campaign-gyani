@@ -22,8 +22,8 @@ export class TrackingController {
   }
 
   @Get('c/:rid')
-  async click(@Param('rid') rid: string, @Query('u') u: string | undefined, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const target = await this.tracking.recordClick(rid, meta(req), u);
+  async click(@Param('rid') rid: string, @Query('u') u: string | undefined, @Query('s') s: string | undefined, @Req() req: Request, @Res() res: Response): Promise<void> {
+    const target = await this.tracking.recordClick(rid, meta(req), u, s);
     res.redirect(302, target);
   }
 

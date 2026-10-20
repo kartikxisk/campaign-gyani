@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { RenderService } from '../render.service';
 
-const svc = new RenderService({ PUBLIC_BASE_URL: 'https://pub.example.com' } as any);
+const svc = new RenderService({ PUBLIC_BASE_URL: 'https://pub.example.com', SESSION_SECRET: 'test-secret-session-key-123456' } as any);
 const ctx = { FirstName: 'Ada', LastName: 'Lovelace', Email: 'ada@corp.com', Position: 'Engineer', URL: 'https://pub.example.com/api/t/c/RID1', ExternalURL: 'https://evil.test/x' };
 
 describe('renderTemplate', () => {
@@ -38,6 +38,13 @@ describe('rewriteLinks', () => {
     expect(out).toContain('https://pub.example.com/api/t/c/RID1');
     expect(out).toContain('>Sign in</a>');
     expect(out).toContain(encodeURIComponent('https://bank.test/login'));
+  });
+});
+
+describe('rewriteLinks signature', () => {
+  it('appends a signature parameter to the tracked link', () => {
+    const out = svc.rewriteLinks('<a href="https://bank.test/login">go</a>', 'RID1');
+    expect(out).toMatch(/[?&]s=[a-f0-9]{8,}/);
   });
 });
 
