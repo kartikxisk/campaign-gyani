@@ -30,6 +30,12 @@ describe('assets (e2e)', () => {
     expect(res.status).toBe(401);
   });
 
+  it('404s on a malformed filename and on an unknown file', async () => {
+    expect((await request(app.getHttpServer()).get('/api/assets/file/..%2f..%2fetc%2fpasswd')).status).toBe(404);
+    expect((await request(app.getHttpServer()).get('/api/assets/file/not-a-valid-name')).status).toBe(404);
+    expect((await request(app.getHttpServer()).get('/api/assets/file/' + 'a'.repeat(32) + '.png')).status).toBe(404);
+  });
+
   it('rejects an SVG uploaded as an image (stored XSS guard)', async () => {
     const { agent, csrf } = await authed(app);
     const res = await agent
@@ -52,6 +58,8 @@ describe('assets (e2e)', () => {
     const fetched = await request(app.getHttpServer()).get(path);
     expect(fetched.headers['x-content-type-options']).toBe('nosniff');
     expect(fetched.headers['content-disposition']).toContain('attachment');
+    expect(fetched.headers['content-type']).toContain('application/octet-stream');
+    expect(fetched.headers['content-security-policy']).toContain("sandbox");
     await agent.delete(`/api/assets/${up.body.id}`).set('x-csrf-token', csrf);
   });
 

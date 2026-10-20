@@ -48,18 +48,28 @@ export class AssetsController {
   // Public: assets (logos, inline images) must be fetchable by mail clients.
   @Get('file/:filename')
   async serve(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
-    const full = this.assets.resolveStored(filename);
-    const asset = await this.assets.findByFilename(filename);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (asset) {
-      res.type(asset.mimetype);
-      // Anything not a known-safe inline image is forced to download, so an
-      // uploaded SVG/HTML cannot execute script from this origin.
-      if (!isSafeImage(asset.mimetype)) {
-        res.setHeader('Content-Disposition', `attachment; filename="${asset.filename}"`);
-      }
+    // One normalized key for both the DB lookup and the filesystem read, so a
+    // parser differential cannot select a different file than the one vetted.
+    if (!/^[a-f0-9]{32}\.[a-z0-9]+$/.test(filename)) {
+      res.status(404).end();
+      return;
     }
-    res.sendFile(full, (err) => {
+    const asset = await this.assets.findByFilename(filename);
+    if (!asset) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (isSafeImage(asset.mimetype)) {
+      res.type(asset.mimetype);
+    } else {
+      // Never reflect an untrusted mimetype: force a neutral type + download +
+      // locked-down CSP so a stored file cannot act as a same-origin gadget.
+      res.type('application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${asset.filename}"`);
+      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    }
+    res.sendFile(this.assets.resolveStored(filename), (err) => {
       if (err && !res.headersSent) res.status(404).end();
     });
   }
