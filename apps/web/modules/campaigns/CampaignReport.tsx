@@ -6,6 +6,8 @@ import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { parseUA } from '@/lib/ua';
+import { useMode } from '@/lib/mode';
+import { openRate, clickRate } from '@cg/shared';
 
 interface Campaign { id: string; name: string; status: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; }
 interface Counts { sent: number; opened: number; clicked: number; submitted: number; reported: number; successRate: number; }
@@ -19,6 +21,8 @@ export function CampaignReport({ id }: { id: string }) {
   const qc = useQueryClient();
   const { notify } = useToast();
   const download = (path: string) => { const a = document.createElement('a'); a.href = path; a.click(); };
+  const { mode } = useMode();
+  const email = mode === 'email';
   const campaign = useQuery<Campaign>({ queryKey: ['campaigns', 'item', id], queryFn: () => api.get<Campaign>(`/campaigns/${id}`) });
   const counts = useQuery<Counts>({ queryKey: ['campaigns', id, 'counts'], queryFn: () => api.get<Counts>(`/campaigns/${id}/report`), refetchInterval: 15000 });
   const results = useQuery<Result[]>({ queryKey: ['campaigns', id, 'results'], queryFn: () => api.get<Result[]>(`/campaigns/${id}/results`), refetchInterval: 15000 });
@@ -54,7 +58,7 @@ export function CampaignReport({ id }: { id: string }) {
     { key: 'name', header: 'Recipient', render: (r) => <div><div className="font-medium text-ink">{[r.firstName, r.lastName].filter(Boolean).join(' ') || '—'}</div><div className="font-mono text-xs text-muted">{r.email}</div></div> },
     { key: 'position', header: 'Role' },
     { key: 'status', header: 'Status', render: (r) => <Badge tone={statusTone[r.status] ?? 'neutral'}>{r.status}</Badge> },
-    { key: 'reported', header: 'Reported', render: (r) => r.reported ? <Badge tone="reported">Yes</Badge> : <span className="text-muted">No</span> },
+    ...(email ? [] : [{ key: 'reported', header: 'Reported', render: (r: Result) => r.reported ? <Badge tone="reported">Yes</Badge> : <span className="text-muted">No</span> }]),
   ];
 
   if (!campaign.data) return <div className="text-sm text-muted">Loading…</div>;
@@ -80,24 +84,35 @@ export function CampaignReport({ id }: { id: string }) {
           </div>
         } />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
+      <div className={`mb-6 grid grid-cols-2 gap-4 ${email ? 'lg:grid-cols-5' : 'lg:grid-cols-6'}`}>
         <StatTile label="Sent" value={c?.sent ?? 0} />
         <StatTile label="Opened" value={c?.opened ?? 0} tone="var(--cg-opened)" />
         <StatTile label="Clicked" value={c?.clicked ?? 0} tone="var(--cg-clicked)" />
-        <StatTile label="Submitted" value={c?.submitted ?? 0} tone="var(--cg-submitted)" />
-        <StatTile label="Reported" value={c?.reported ?? 0} tone="var(--cg-reported)" />
-        <StatTile label="Success" value={`${c?.successRate ?? 0}%`} tone="var(--cg-primary)" />
+        {email ? (
+          <>
+            <StatTile label="Open rate" value={`${openRate(c?.sent ?? 0, c?.opened ?? 0)}%`} tone="var(--cg-opened)" />
+            <StatTile label="Click rate" value={`${clickRate(c?.sent ?? 0, c?.clicked ?? 0)}%`} tone="var(--cg-primary)" />
+          </>
+        ) : (
+          <>
+            <StatTile label="Submitted" value={c?.submitted ?? 0} tone="var(--cg-submitted)" />
+            <StatTile label="Reported" value={c?.reported ?? 0} tone="var(--cg-reported)" />
+            <StatTile label="Success" value={`${c?.successRate ?? 0}%`} tone="var(--cg-primary)" />
+          </>
+        )}
       </div>
 
       <Card className="mb-6">
-        <CardHeader title="Exposure funnel" />
+        <CardHeader title={email ? 'Engagement funnel' : 'Exposure funnel'} />
         <CardBody>
           <Funnel steps={[
             { label: 'Sent', value: c?.sent ?? 0, color: 'var(--cg-sent)' },
             { label: 'Opened', value: c?.opened ?? 0, color: 'var(--cg-opened)' },
             { label: 'Clicked', value: c?.clicked ?? 0, color: 'var(--cg-clicked)' },
-            { label: 'Submitted', value: c?.submitted ?? 0, color: 'var(--cg-submitted)' },
-            { label: 'Reported', value: c?.reported ?? 0, color: 'var(--cg-reported)' },
+            ...(email ? [] : [
+              { label: 'Submitted', value: c?.submitted ?? 0, color: 'var(--cg-submitted)' },
+              { label: 'Reported', value: c?.reported ?? 0, color: 'var(--cg-reported)' },
+            ]),
           ]} />
         </CardBody>
       </Card>
