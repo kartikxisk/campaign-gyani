@@ -83,3 +83,4 @@ Redis can be pointed at managed instances via `DATABASE_URL` / `REDIS_URL`.
 
 - `pnpm -F @cg/api prisma migrate deploy` — apply migrations (run on deploy)
 - `pnpm -F @cg/api db:seed` — idempotent admin seed (also runs on API boot)
+- `pnpm -F @cg/api reset-password -- --email you@co.com --password 'NewPass123'` — recover a locked-out admin (single-tenant self-hosted; invalidates existing sessions)
