@@ -16,6 +16,7 @@ import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import { ASSET_KINDS } from '@cg/shared';
 import { SessionGuard } from '../auth/session.guard';
+import { isSafeImage } from './mime';
 import { AssetsService, MAX_FILE_SIZE, type AssetWithUrl } from './assets.service';
 
 @Controller('assets')
@@ -48,6 +49,16 @@ export class AssetsController {
   @Get('file/:filename')
   async serve(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
     const full = this.assets.resolveStored(filename);
+    const asset = await this.assets.findByFilename(filename);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (asset) {
+      res.type(asset.mimetype);
+      // Anything not a known-safe inline image is forced to download, so an
+      // uploaded SVG/HTML cannot execute script from this origin.
+      if (!isSafeImage(asset.mimetype)) {
+        res.setHeader('Content-Disposition', `attachment; filename="${asset.filename}"`);
+      }
+    }
     res.sendFile(full, (err) => {
       if (err && !res.headersSent) res.status(404).end();
     });

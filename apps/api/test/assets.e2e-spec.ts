@@ -30,6 +30,31 @@ describe('assets (e2e)', () => {
     expect(res.status).toBe(401);
   });
 
+  it('rejects an SVG uploaded as an image (stored XSS guard)', async () => {
+    const { agent, csrf } = await authed(app);
+    const res = await agent
+      .post('/api/assets')
+      .set('x-csrf-token', csrf)
+      .field('kind', 'image')
+      .attach('file', Buffer.from('<svg onload="alert(1)"></svg>'), { filename: 'x.svg', contentType: 'image/svg+xml' });
+    expect(res.status).toBe(400);
+  });
+
+  it('serves an attachment with nosniff and attachment disposition', async () => {
+    const { agent, csrf } = await authed(app);
+    const up = await agent
+      .post('/api/assets')
+      .set('x-csrf-token', csrf)
+      .field('kind', 'attachment')
+      .attach('file', Buffer.from('%PDF-1.4'), { filename: 'doc.pdf', contentType: 'application/pdf' });
+    expect(up.status).toBe(201);
+    const path = new URL(up.body.url).pathname;
+    const fetched = await request(app.getHttpServer()).get(path);
+    expect(fetched.headers['x-content-type-options']).toBe('nosniff');
+    expect(fetched.headers['content-disposition']).toContain('attachment');
+    await agent.delete(`/api/assets/${up.body.id}`).set('x-csrf-token', csrf);
+  });
+
   it('uploads a file and serves it back at its URL', async () => {
     const { agent, csrf } = await authed(app);
     const up = await agent

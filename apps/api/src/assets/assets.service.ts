@@ -1,11 +1,12 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { extname, join, resolve, basename } from 'node:path';
+import { join, resolve, basename } from 'node:path';
 import type { Asset } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
+import { extForUpload } from './mime';
 
 export const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
@@ -35,8 +36,11 @@ export class AssetsService {
     if (buffer.length > MAX_FILE_SIZE) {
       throw new BadRequestException('File exceeds the 15MB limit');
     }
+    const ext = extForUpload(meta.kind, meta.mimetype);
+    if (ext === null) {
+      throw new BadRequestException('Unsupported image type (allowed: PNG, JPEG, GIF, WebP)');
+    }
     await mkdir(this.env.ASSET_DIR, { recursive: true });
-    const ext = extname(meta.originalname).slice(0, 12);
     const filename = `${randomBytes(16).toString('hex')}${ext}`;
     await writeFile(join(this.env.ASSET_DIR, filename), buffer);
     const asset = await this.prisma.asset.create({
@@ -55,6 +59,10 @@ export class AssetsService {
     if (!asset) throw new NotFoundException('Asset not found');
     await unlink(asset.path).catch(() => undefined);
     await this.prisma.asset.delete({ where: { id } });
+  }
+
+  async findByFilename(filename: string): Promise<Asset | null> {
+    return this.prisma.asset.findFirst({ where: { filename } });
   }
 
   /** Resolve a safe absolute path for a stored filename, guarding against traversal. */
