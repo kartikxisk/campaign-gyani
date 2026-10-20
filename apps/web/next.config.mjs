@@ -3,6 +3,7 @@ const API_URL = process.env.API_URL ?? 'http://localhost:8080';
 
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   transpilePackages: ['@cg/ui'],
   async rewrites() {
     return [

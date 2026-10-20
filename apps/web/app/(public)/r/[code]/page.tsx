@@ -10,7 +10,8 @@ export default function PublicReportPage({ params }: { params: Promise<{ code: s
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/public/campaigns/${code}`).then((r) => (r.ok ? r.json() : Promise.reject())).then(setReport).catch(() => setError(true));
+    if (!/^[A-Za-z0-9_-]+$/.test(code)) { setError(true); return; }
+    fetch(`/api/public/campaigns/${encodeURIComponent(code)}`).then((r) => (r.ok ? r.json() : Promise.reject())).then(setReport).catch(() => setError(true));
   }, [code]);
 
   if (error) return <main className="flex min-h-screen items-center justify-center text-sm text-muted">This report link is not available.</main>;
