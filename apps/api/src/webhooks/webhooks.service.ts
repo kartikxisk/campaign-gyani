@@ -22,11 +22,9 @@ export class WebhooksService {
     const row = await this.prisma.appSetting.findUnique({ where: { id: 'app' } });
     if (row?.webhookSecret) return row.webhookSecret;
     const generated = randomBytes(24).toString('hex');
-    await this.prisma.appSetting.upsert({
-      where: { id: 'app' },
-      create: { id: 'app', webhookSecret: generated },
-      update: { webhookSecret: row?.webhookSecret ?? generated },
-    });
+    // Ensure the singleton exists, then set the secret only if it is still null.
+    await this.prisma.appSetting.upsert({ where: { id: 'app' }, create: { id: 'app', webhookSecret: generated }, update: {} });
+    await this.prisma.appSetting.updateMany({ where: { id: 'app', webhookSecret: null }, data: { webhookSecret: generated } });
     const after = await this.prisma.appSetting.findUniqueOrThrow({ where: { id: 'app' } });
     return after.webhookSecret as string;
   }
@@ -49,12 +47,20 @@ export class WebhooksService {
   /** Suppresses an address (bounce/complaint/unsubscribe) and fails its still-pending sends. */
   async suppress(email: string, reason = 'bounce'): Promise<{ suppressed: string }> {
     const normalized = email.trim().toLowerCase();
-    this.logger.warn(`Webhook suppression: ${normalized} (${reason})`);
-    await this.suppression.add(normalized, reason);
+    const cleanReason = reason.replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'bounce';
+    this.logger.warn(`Webhook suppression: ${maskEmail(normalized)} (${cleanReason})`);
+    await this.suppression.add(normalized, cleanReason);
     await this.prisma.campaignResult.updateMany({
       where: { email: { equals: normalized, mode: 'insensitive' }, status: { in: [ResultStatus.SCHEDULED, ResultStatus.SENDING] } },
       data: { status: ResultStatus.ERROR, error: `Suppressed (${reason})` },
     });
     return { suppressed: normalized };
   }
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  const head = (local ?? '').slice(0, 1);
+  return `${head}***@${domain}`;
 }
