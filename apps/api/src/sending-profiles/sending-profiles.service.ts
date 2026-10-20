@@ -1,4 +1,4 @@
-import { BadGatewayException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { SendingProfile } from '@prisma/client';
 import type { SendingProfileDto } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -6,6 +6,7 @@ import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
 import { encryptSecret } from '../auth/crypto.util';
 import { buildTransport, type TransportProfile } from '../mail/transport.factory';
+import { assertSmtpTarget, SmtpTargetError } from '../mail/smtp-guard';
 
 export type SafeProfile = Omit<SendingProfile, 'passwordEnc'> & { hasPassword: boolean };
 
@@ -23,6 +24,8 @@ export interface SendTestInput {
 
 @Injectable()
 export class SendingProfilesService {
+  private readonly logger = new Logger(SendingProfilesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(ENV) private readonly env: Pick<Env, 'SMTP_ENC_KEY'>,
@@ -68,7 +71,15 @@ export class SendingProfilesService {
   async update(id: string, dto: SendingProfileDto): Promise<SafeProfile> {
     const existing = await this.prisma.sendingProfile.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Sending profile not found');
-    // An empty password means "keep the stored one".
+    const identityChanged =
+      dto.host !== existing.host ||
+      dto.port !== existing.port ||
+      dto.username !== existing.username ||
+      dto.ignoreCertErrors !== existing.ignoreCertErrors;
+    if (identityChanged && !dto.password) {
+      throw new BadRequestException('Re-enter the password when changing host, port, username or TLS settings');
+    }
+    // An empty password means "keep the stored one" (only when identity is unchanged).
     const passwordEnc = dto.password ? encryptSecret(dto.password, this.env.SMTP_ENC_KEY) : existing.passwordEnc;
     const row = await this.prisma.sendingProfile.update({
       where: { id },
@@ -119,6 +130,12 @@ export class SendingProfilesService {
       };
       from = input.fromAddress ?? input.username ?? 'test@localhost';
     }
+    try {
+      await assertSmtpTarget(transportProfile.host, transportProfile.port);
+    } catch (err) {
+      if (err instanceof SmtpTargetError) throw new BadRequestException(err.message);
+      throw err;
+    }
     const transporter = buildTransport(transportProfile, this.env.SMTP_ENC_KEY, 3000);
     try {
       const info = await transporter.sendMail({
@@ -129,7 +146,8 @@ export class SendingProfilesService {
       });
       return { ok: true, messageId: info.messageId };
     } catch (err) {
-      throw new BadGatewayException(`SMTP send failed: ${(err as Error).message}`);
+      this.logger.warn(`SMTP test send failed: ${(err as Error).message}`);
+      throw new BadGatewayException('SMTP send failed');
     } finally {
       transporter.close();
     }

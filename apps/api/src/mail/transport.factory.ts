@@ -42,6 +42,7 @@ export function buildTransport(profile: TransportProfile, encKey: string, overri
     host: profile.host,
     port: profile.port,
     secure: profile.port === 465,
+    requireTLS: profile.port !== 465,
     pool: profile.pool,
     maxConnections: profile.maxConnections,
     maxMessages: profile.maxMessages,

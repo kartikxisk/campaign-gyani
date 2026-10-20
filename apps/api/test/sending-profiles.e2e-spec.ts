@@ -52,13 +52,34 @@ describe('sending-profiles (e2e)', () => {
     expect(del.status).toBe(200);
   });
 
+  it('rejects a test send to a non-SMTP port or private host', async () => {
+    const { agent, csrf } = await authed(app);
+    const badPort = await agent.post('/api/sending-profiles/test').set('x-csrf-token', csrf)
+      .send({ host: 'smtp.example.com', port: 8080, username: 'u', password: 'p', fromAddress: 'a@b.com', to: 'v@b.com' });
+    expect(badPort.status).toBe(400);
+    const privateHost = await agent.post('/api/sending-profiles/test').set('x-csrf-token', csrf)
+      .send({ host: '127.0.0.1', port: 587, username: 'u', password: 'p', fromAddress: 'a@b.com', to: 'v@b.com' });
+    expect(privateHost.status).toBe(400);
+  });
+
+  it('requires the password to be re-entered when the host changes', async () => {
+    const { agent, csrf } = await authed(app);
+    const created = await agent.post('/api/sending-profiles').set('x-csrf-token', csrf).send(profile);
+    const id = created.body.id;
+    const res = await agent.put(`/api/sending-profiles/${id}`).set('x-csrf-token', csrf)
+      .send({ ...profile, host: 'smtp.changed.com', password: '' });
+    expect(res.status).toBe(400);
+    await agent.delete(`/api/sending-profiles/${id}`).set('x-csrf-token', csrf);
+  });
+
   it('returns a structured error when a test send hits an unreachable host', async () => {
     const { agent, csrf } = await authed(app);
+    // A resolvable public host on an allowed SMTP port that refuses/time-outs.
     const res = await agent
       .post('/api/sending-profiles/test')
       .set('x-csrf-token', csrf)
-      .send({ host: 'smtp.nonexistent.invalid', port: 2525, username: 'u', password: 'p', fromAddress: 'a@b.com', to: 'victim@b.com' });
+      .send({ host: 'example.com', port: 2525, username: 'u', password: 'p', fromAddress: 'a@b.com', to: 'victim@b.com' });
     expect(res.status).toBe(502);
-    expect(res.body.message).toContain('SMTP send failed');
+    expect(res.body.message).toBe('SMTP send failed');
   });
 });
