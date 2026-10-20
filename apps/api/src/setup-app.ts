@@ -34,6 +34,4 @@ export async function configureApp(app: INestApplication, env: Env): Promise<voi
 
   app.enableCors({ origin: env.WEB_ORIGIN, credentials: true });
 
-  const closable = app as unknown as { _cgRedis?: typeof redisClient };
-  closable._cgRedis = redisClient;
 }
