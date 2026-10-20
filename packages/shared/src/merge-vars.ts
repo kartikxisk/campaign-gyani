@@ -6,6 +6,7 @@ export const MERGE_TOKENS = [
   '{{.Position}}',
   '{{.URL}}',
   '{{.ExternalURL}}',
+  '{{.UnsubscribeURL}}',
 ] as const;
 export type MergeToken = (typeof MERGE_TOKENS)[number];
 
@@ -16,4 +17,5 @@ export interface MergeContext {
   Position?: string;
   URL?: string;
   ExternalURL?: string;
+  UnsubscribeURL?: string;
 }

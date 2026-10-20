@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
 import { SEND_QUEUE, type SendQueue } from '../sending/send-queue.port';
 import { SettingsService } from '../settings/settings.service';
+import { SuppressionService } from '../suppression/suppression.service';
 
 function token(bytes = 24): string {
   return randomBytes(bytes).toString('base64url');
@@ -17,6 +18,7 @@ export class CampaignsService {
     private readonly prisma: PrismaService,
     @Inject(SEND_QUEUE) private readonly queue: SendQueue,
     private readonly settings: SettingsService,
+    private readonly suppression: SuppressionService,
   ) {}
 
   async create(dto: CampaignCreateDto): Promise<Campaign> {
@@ -111,6 +113,11 @@ export class CampaignsService {
       // De-dup targets by email across groups.
       const byEmail = new Map<string, (typeof targets)[number]>();
       for (const t of targets) if (!byEmail.has(t.email.toLowerCase())) byEmail.set(t.email.toLowerCase(), t);
+      // Email mode honors the suppression list — unsubscribed recipients are skipped.
+      if ((await this.settings.getMode()) === 'email') {
+        const suppressed = await this.suppression.suppressedSet([...byEmail.keys()]);
+        for (const email of suppressed) byEmail.delete(email);
+      }
 
       const created = [];
       for (const t of byEmail.values()) {

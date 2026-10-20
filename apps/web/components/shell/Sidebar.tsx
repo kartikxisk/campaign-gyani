@@ -13,7 +13,7 @@ function isActive(pathname: string, href: string): boolean {
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { mode } = useMode();
-  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !(mode === 'email' && i.href === '/landing-pages')) })).filter((g) => g.items.length > 0);
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !(mode === 'email' && i.href === '/landing-pages') && !(mode !== 'email' && i.href === '/suppressions')) })).filter((g) => g.items.length > 0);
   return (
     <nav className="flex-1 space-y-6 px-3 py-4">
       {groups.map((group) => (

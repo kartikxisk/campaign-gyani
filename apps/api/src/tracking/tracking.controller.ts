@@ -43,4 +43,12 @@ export class TrackingController {
     await this.tracking.recordReport(rid, meta(req));
     return { ok: true };
   }
+
+  @Get('u/:rid')
+  async unsubscribe(@Param('rid') rid: string, @Res() res: Response): Promise<void> {
+    const email = await this.tracking.recordUnsubscribe(rid);
+    const safe = email.replace(/[<>&"']/g, '');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribed</title></head><body style="font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;background:#f7f9fa;color:#131922"><div style="text-align:center;padding:2rem"><h1 style="font-size:1.25rem">You're unsubscribed</h1><p style="color:#6b7a84">${safe} won't receive further emails from this sender.</p></div></body></html>`);
+  }
 }

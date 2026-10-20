@@ -12,5 +12,6 @@ export const NAV_GROUPS: { heading: string; items: { href: string; label: string
   ] },
   { heading: 'Audience', items: [
     { href: '/groups', label: 'Target groups', icon: 'groups' },
+    { href: '/suppressions', label: 'Suppressions', icon: 'suppression' },
   ] },
 ];

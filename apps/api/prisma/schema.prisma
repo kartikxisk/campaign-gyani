@@ -194,6 +194,15 @@ model CampaignEvent {
   @@map("campaign_event")
 }
 
+model Suppression {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String   @default("manual")
+  createdAt DateTime @default(now())
+
+  @@map("suppression")
+}
+
 model AppSetting {
   id    String  @id @default("app")
   mode  String?

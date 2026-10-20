@@ -41,6 +41,10 @@ export class RenderService {
     return `${this.env.PUBLIC_BASE_URL}/api/t/o/${rid}`;
   }
 
+  unsubscribeUrl(rid: string): string {
+    return `${this.env.PUBLIC_BASE_URL}/api/t/u/${rid}`;
+  }
+
   /** Replaces supported tokens with their context value; unknown/missing → empty. */
   renderTemplate(html: string, ctx: MergeContext): string {
     return html.replace(TOKEN, (_m, field: string) => {
@@ -76,7 +80,7 @@ export class RenderService {
 
   /** Full render for one recipient: fill tokens (URL set to the tracked link), rewrite links, inject pixel. */
   renderForRecipient(html: string, ctx: MergeContext, rid: string): string {
-    const withUrl: MergeContext = { ...ctx, URL: this.clickUrl(rid) };
+    const withUrl: MergeContext = { ...ctx, URL: this.clickUrl(rid), UnsubscribeURL: this.unsubscribeUrl(rid) };
     const filled = this.renderTemplate(html, withUrl);
     return this.injectPixel(this.rewriteLinks(filled, rid), rid);
   }

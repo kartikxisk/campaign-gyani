@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
 import { hmacSign, safeStringEqual } from '../auth/crypto.util';
 import { SettingsService } from '../settings/settings.service';
+import { SuppressionService } from '../suppression/suppression.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
 
@@ -22,6 +23,7 @@ export class TrackingService {
     private readonly prisma: PrismaService,
     private readonly render: RenderService,
     private readonly settings: SettingsService,
+    private readonly suppression: SuppressionService,
     @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>,
   ) {}
 
@@ -98,6 +100,14 @@ export class TrackingService {
     });
     await this.bump(result.id, result.status, ResultStatus.SUBMITTED);
     return lp.redirectUrl;
+  }
+
+  /** Unsubscribe: adds the recipient's email to the suppression list. */
+  async recordUnsubscribe(rid: string): Promise<string> {
+    const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
+    if (!result) throw new NotFoundException();
+    await this.suppression.add(result.email, 'unsubscribe');
+    return result.email;
   }
 
   async recordReport(rid: string, meta: ClientMeta): Promise<void> {
