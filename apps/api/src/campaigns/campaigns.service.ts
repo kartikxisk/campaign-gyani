@@ -202,7 +202,7 @@ export class CampaignsService {
     await this.findOne(id);
     return this.prisma.campaign.update({
       where: { id },
-      data: { status: CampaignStatus.COMPLETE, completedAt: new Date() },
+      data: { status: CampaignStatus.COMPLETE, completedAt: new Date(), nextRunAt: null },
     });
   }
 

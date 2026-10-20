@@ -22,15 +22,21 @@ export class RecurrenceService {
   /** Clones + launches every recurring campaign whose next run is due, then advances it. */
   async runDue(now: Date): Promise<number> {
     const due = await this.prisma.campaign.findMany({
-      where: { repeat: { in: ['DAILY', 'WEEKLY', 'MONTHLY'] }, nextRunAt: { not: null, lte: now }, parentId: null },
+      where: { repeat: { in: ['DAILY', 'WEEKLY', 'MONTHLY'] }, nextRunAt: { not: null, lte: now }, parentId: null, status: { in: [CampaignStatus.RUNNING, CampaignStatus.SCHEDULED] } },
       include: { templates: true, groups: true },
     });
     let launched = 0;
     for (const parent of due) {
+      const next = advance(parent.nextRunAt as Date, parent.repeat as Repeat);
+      // Atomically claim this occurrence: only one runner advances nextRunAt, and
+      // only while the series is still active. A failed claim means already taken.
+      const claim = await this.prisma.campaign.updateMany({
+        where: { id: parent.id, nextRunAt: parent.nextRunAt, status: { in: [CampaignStatus.RUNNING, CampaignStatus.SCHEDULED] } },
+        data: { nextRunAt: next },
+      });
+      if (claim.count !== 1) continue;
       try {
         await this.cloneAndLaunch(parent.id);
-        const next = advance(parent.nextRunAt as Date, parent.repeat as Repeat);
-        await this.prisma.campaign.update({ where: { id: parent.id }, data: { nextRunAt: next } });
         launched += 1;
       } catch (e) {
         this.logger.error(`Recurrence of ${parent.id} failed: ${(e as Error).message}`);
@@ -41,6 +47,9 @@ export class RecurrenceService {
 
   async cloneAndLaunch(parentId: string): Promise<string> {
     const parent = await this.prisma.campaign.findUniqueOrThrow({ where: { id: parentId }, include: { templates: true, groups: true } });
+    if (parent.status !== CampaignStatus.RUNNING && parent.status !== CampaignStatus.SCHEDULED) {
+      throw new Error('Series no longer active');
+    }
     const stamp = new Date().toLocaleDateString();
     const child = await this.prisma.campaign.create({
       data: {

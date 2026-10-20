@@ -36,7 +36,7 @@ describe('RecurrenceService.runDue', () => {
     const past = new Date(Date.now() - 1000);
     const parent = await prisma.campaign.create({
       data: {
-        name: 'Weekly drill', sendByDate: past, repeat: 'WEEKLY', nextRunAt: past,
+        name: 'Weekly drill', status: 'RUNNING', sendByDate: past, repeat: 'WEEKLY', nextRunAt: past,
         landingPageId: page.id, sendingProfileId: smtp.id,
         templates: { create: [{ templateId: tpl.id }] }, groups: { create: [{ groupId: group.id }] },
       },
@@ -51,6 +51,9 @@ describe('RecurrenceService.runDue', () => {
     expect(children[0]!.repeat).toBe('NONE');
     const results = await prisma.campaignResult.findMany({ where: { campaignId: children[0]!.id } });
     expect(results).toHaveLength(1);
+
+    // A second immediate run does nothing (nextRunAt already advanced to the future).
+    expect(await recurrence.runDue(new Date())).toBe(0);
 
     const advanced = await prisma.campaign.findUniqueOrThrow({ where: { id: parent.id } });
     expect(advanced.nextRunAt!.getTime()).toBeGreaterThan(past.getTime());
