@@ -68,6 +68,7 @@ describe('reports (e2e)', () => {
     const pub = await request(app.getHttpServer()).get(`/api/public/campaigns/${code}`);
     expect(pub.status).toBe(200);
     expect(pub.body.name).toBe('rep');
+    expect(pub.body.mode).toBeDefined();
     expect(pub.body.counts.opened).toBeGreaterThanOrEqual(1);
     expect(JSON.stringify(pub.body)).not.toContain('passwordEnc');
 
