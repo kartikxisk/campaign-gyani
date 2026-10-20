@@ -1,0 +1,102 @@
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button, Card, CardBody, Combobox, Field, Input, MultiSelect, useToast, cn } from '@cg/ui';
+import { PageHeader } from '@/components/shell/PageHeader';
+import { useAllOptions } from '@/lib/resource';
+import { api } from '@/lib/api-client';
+import { WIZARD_STEPS, validateStep, toCreatePayload, type WizardData } from './wizard-validate';
+
+const initial: WizardData = { name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '' };
+
+export function CampaignWizard() {
+  const router = useRouter();
+  const { notify } = useToast();
+  const [step, setStep] = useState(0);
+  const [d, setD] = useState<WizardData>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
+
+  const groups = useAllOptions<{ id: string; name: string }>('groups', (g) => g.name);
+  const templates = useAllOptions<{ id: string; name: string }>('templates', (t) => t.name);
+  const pages = useAllOptions<{ id: string; name: string }>('landing-pages', (p) => p.name);
+  const profiles = useAllOptions<{ id: string; name: string }>('sending-profiles', (s) => s.name);
+  const nameOf = (opts: { value: string; label: string }[], id: string) => opts.find((o) => o.value === id)?.label ?? '—';
+
+  const next = () => { const e = validateStep(step, d); if (e) { setError(e); return; } setError(null); setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1)); };
+  const back = () => { setError(null); setStep((s) => Math.max(s - 1, 0)); };
+
+  const launch = async () => {
+    for (let i = 0; i < WIZARD_STEPS.length - 1; i++) { const e = validateStep(i, d); if (e) { setStep(i); setError(e); return; } }
+    setLaunching(true);
+    try {
+      const created = await api.post<{ id: string }>('/campaigns', toCreatePayload(d));
+      await api.post(`/campaigns/${created.id}/launch`);
+      notify('Campaign launched', 'success');
+      router.push(`/campaigns/${created.id}`);
+    } catch (e) { notify((e as Error).message, 'error'); setLaunching(false); }
+  };
+
+  return (
+    <div>
+      <PageHeader title="New campaign" subtitle="Seven quick steps from idea to launch." />
+      <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
+        <Card>
+          <div className="flex gap-1 overflow-x-auto border-b border-line px-4 py-3">
+            {WIZARD_STEPS.map((label, i) => (
+              <button key={label} type="button" onClick={() => i <= step && setStep(i)}
+                className={cn('shrink-0 rounded-full px-3 py-1 text-xs font-medium', i === step ? 'bg-primary text-primary-ink' : i < step ? 'bg-primary-soft text-ink' : 'text-muted')}>
+                {i + 1}. {label}
+              </button>
+            ))}
+          </div>
+          <CardBody className="min-h-[320px]">
+            {step === 0 && <Field label="Campaign name" error={error ?? undefined}><Input autoFocus value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} placeholder="Q4 credential-harvest drill" /></Field>}
+            {step === 1 && <Field label="Target groups" error={error ?? undefined} hint="Who receives the simulated message."><MultiSelect options={groups} value={d.groupIds} onChange={(v) => setD({ ...d, groupIds: v })} /></Field>}
+            {step === 2 && (
+              <div className="space-y-4">
+                <Field label="Email templates" error={error ?? undefined}><MultiSelect options={templates} value={d.templateIds} onChange={(v) => setD({ ...d, templateIds: v })} /></Field>
+                {d.templateIds.length > 1 && (
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium text-ink">More than one template — how should they be used?</legend>
+                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="shuffle" checked={d.shuffleTemplates === true} onChange={() => setD({ ...d, shuffleTemplates: true })} /> Shuffle: each recipient gets a random one</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="shuffle" checked={d.shuffleTemplates === false} onChange={() => setD({ ...d, shuffleTemplates: false })} /> Use the first template for everyone</label>
+                  </fieldset>
+                )}
+              </div>
+            )}
+            {step === 3 && <Field label="Landing page" error={error ?? undefined}><Combobox options={pages} value={d.pageId} onChange={(v) => setD({ ...d, pageId: v })} /></Field>}
+            {step === 4 && <Field label="Sending profile" error={error ?? undefined}><Combobox options={profiles} value={d.smtpId} onChange={(v) => setD({ ...d, smtpId: v })} /></Field>}
+            {step === 5 && <Field label="Send by" error={error ?? undefined} hint="A time in the past sends immediately."><Input type="datetime-local" value={d.sendByDate} onChange={(e) => setD({ ...d, sendByDate: e.target.value })} /></Field>}
+            {step === 6 && (
+              <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
+                <dt className="text-muted">Name</dt><dd className="text-ink">{d.name}</dd>
+                <dt className="text-muted">Groups</dt><dd className="text-ink">{d.groupIds.map((g) => nameOf(groups, g)).join(', ')}</dd>
+                <dt className="text-muted">Templates</dt><dd className="text-ink">{d.templateIds.map((t) => nameOf(templates, t)).join(', ')}{d.templateIds.length > 1 ? ` (${d.shuffleTemplates ? 'shuffled' : 'first only'})` : ''}</dd>
+                <dt className="text-muted">Landing</dt><dd className="text-ink">{nameOf(pages, d.pageId)}</dd>
+                <dt className="text-muted">Profile</dt><dd className="text-ink">{nameOf(profiles, d.smtpId)}</dd>
+                <dt className="text-muted">Send by</dt><dd className="text-ink">{d.sendByDate || '—'}</dd>
+              </dl>
+            )}
+          </CardBody>
+          <div className="flex items-center justify-between border-t border-line px-5 py-3">
+            <Button variant="ghost" onClick={back} disabled={step === 0}>Back</Button>
+            {step < WIZARD_STEPS.length - 1
+              ? <Button onClick={next}>Continue</Button>
+              : <Button onClick={launch} disabled={launching}>{launching ? 'Launching…' : 'Launch campaign'}</Button>}
+          </div>
+        </Card>
+        <aside className="hidden lg:block">
+          <Card><CardBody>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">Summary</div>
+            <div className="mt-3 space-y-2 text-sm">
+              <div><span className="text-muted">Name</span><div className="text-ink">{d.name || '—'}</div></div>
+              <div><span className="text-muted">Audience</span><div className="text-ink">{d.groupIds.length} group(s)</div></div>
+              <div><span className="text-muted">Templates</span><div className="text-ink">{d.templateIds.length}</div></div>
+            </div>
+          </CardBody></Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
