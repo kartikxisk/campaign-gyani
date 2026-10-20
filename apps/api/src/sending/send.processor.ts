@@ -5,6 +5,7 @@ import { RenderService } from '../render/render.service';
 import { Circuit, CircuitOpenError } from './circuit';
 import { MAILER, type Mailer } from './mailer';
 import { SettingsService } from '../settings/settings.service';
+import { SuppressionService } from '../suppression/suppression.service';
 
 const TERMINAL = new Set<string>([ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED, ResultStatus.REPORTED]);
 
@@ -18,6 +19,7 @@ export class SendProcessor {
     @Inject(MAILER) private readonly mailer: Mailer,
     private readonly circuit: Circuit,
     private readonly settings: SettingsService,
+    private readonly suppression: SuppressionService,
   ) {}
 
   async deliver(resultId: string, attempt: number, maxAttempts: number): Promise<void> {
@@ -29,6 +31,16 @@ export class SendProcessor {
     if (TERMINAL.has(result.status)) return; // already progressed; don't resend
     // Don't send for a campaign that is completed, still draft, or deleted.
     if (result.campaign.status !== 'SCHEDULED' && result.campaign.status !== 'RUNNING') return;
+    const mode = await this.settings.getMode();
+    // Re-check suppression at send time: a recipient may have unsubscribed after
+    // launch while this job sat in the queue.
+    if (mode === 'email') {
+      const suppressed = await this.suppression.suppressedSet([result.email]);
+      if (suppressed.has(result.email.toLowerCase())) {
+        await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.ERROR, error: 'Recipient unsubscribed' } });
+        return;
+      }
+    }
     const profile = result.campaign.sendingProfile;
     if (!profile) {
       await this.fail(resultId, 'No sending profile configured', attempt, maxAttempts);
@@ -53,7 +65,7 @@ export class SendProcessor {
     let html = this.render.renderForRecipient(template.htmlBody, ctx, result.rid);
     const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(result.rid) });
     // Email mode requires an unsubscribe link; inject a footer if the author left one out.
-    if ((await this.settings.getMode()) === 'email' && !html.includes('/api/t/u/')) {
+    if (mode === 'email' && !html.includes('/api/t/u/')) {
       const url = this.render.unsubscribeUrl(result.rid);
       html += `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e7ee;font:12px system-ui,sans-serif;color:#7a8798">Don't want these emails? <a href="${url}" style="color:#0891b2">Unsubscribe</a>.</div>`;
     }
