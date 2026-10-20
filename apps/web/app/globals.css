@@ -36,4 +36,14 @@
 html, body { height: 100%; }
 body { background: var(--cg-surface); color: var(--cg-ink); font-family: var(--cg-font-sans); -webkit-font-smoothing: antialiased; }
 ::selection { background: color-mix(in srgb, var(--cg-primary) 25%, transparent); }
+/* Motion — deliberate, on-action; one load reveal. Killed under reduced-motion. */
+@keyframes cgOverlayIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes cgModalIn { from { opacity: 0; transform: translate(-50%, -48%) scale(.97) } to { opacity: 1; transform: translate(-50%, -50%) scale(1) } }
+@keyframes cgDrawerIn { from { transform: translateX(100%) } to { transform: translateX(0) } }
+@keyframes cgToastIn { from { opacity: 0; transform: translateX(16px) } to { opacity: 1; transform: translateX(0) } }
+.cg-animate-overlay[data-state='open'] { animation: cgOverlayIn .15s ease-out }
+.cg-animate-modal[data-state='open'] { animation: cgModalIn .17s cubic-bezier(.2,.8,.2,1) }
+.cg-animate-drawer[data-state='open'] { animation: cgDrawerIn .22s cubic-bezier(.2,.8,.2,1) }
+.cg-animate-toast { animation: cgToastIn .18s ease-out }
+
 @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }

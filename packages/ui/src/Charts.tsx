@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { cn } from './cn';
 
 export interface FunnelStep { label: string; value: number; color: string; }
@@ -6,16 +7,20 @@ export interface FunnelStep { label: string; value: number; color: string; }
 export function Funnel({ steps, className }: { steps: FunnelStep[]; className?: string }) {
   const base = Math.max(1, steps[0]?.value ?? 0, ...steps.map((s) => s.value));
   const sent = steps[0]?.value ?? 0;
+  const [grown, setGrown] = useState(false);
+  useEffect(() => { const id = requestAnimationFrame(() => setGrown(true)); return () => cancelAnimationFrame(id); }, []);
   return (
     <div className={cn('space-y-2', className)}>
       {steps.map((s, i) => {
         const pct = Math.round((s.value / base) * 100);
         const share = sent > 0 && i > 0 ? Math.round((s.value / sent) * 100) : null;
+        const target = Math.max(pct, s.value > 0 ? 4 : 0);
         return (
           <div key={s.label} className="flex items-center gap-3">
             <div className="w-24 shrink-0 text-right text-sm text-ink-soft">{s.label}</div>
             <div className="relative h-9 flex-1 overflow-hidden rounded-cg-sm bg-panel-2">
-              <div className="h-full rounded-cg-sm transition-[width] duration-700 ease-out" style={{ width: `${Math.max(pct, s.value > 0 ? 4 : 0)}%`, backgroundColor: s.color }} />
+              <div className="h-full rounded-cg-sm transition-[width] duration-700 ease-out motion-reduce:transition-none"
+                style={{ width: `${grown ? target : 0}%`, backgroundColor: s.color, transitionDelay: `${i * 80}ms` }} />
               <span className="absolute inset-y-0 left-3 flex items-center font-mono text-sm font-semibold text-ink">{s.value}</span>
             </div>
             <div className="w-12 shrink-0 text-right font-mono text-xs text-muted">{share !== null ? `${share}%` : ''}</div>

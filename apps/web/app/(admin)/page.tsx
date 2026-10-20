@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Card, CardBody, CardHeader, Funnel, StatTile, Trend, EmptyState, Badge, statusTone } from '@cg/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
+import { useCountUp } from '@/lib/use-count-up';
 
 interface Dashboard {
   totals: { campaigns: number; running: number; complete: number; groups: number };
@@ -40,7 +41,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center">
               <div className="lg:w-56 lg:shrink-0">
                 <div className="text-sm text-muted">Overall success rate</div>
-                <div className="mt-1 font-display text-6xl font-semibold tabular-nums text-ink">{data.overallSuccessRate}<span className="text-2xl text-muted">%</span></div>
+                <SuccessNumber value={data.overallSuccessRate} />
                 <p className="mt-2 text-sm text-ink-soft">Share of recipients who took the bait, across every campaign.</p>
               </div>
               <div className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6">
@@ -92,4 +93,9 @@ export default function DashboardPage() {
       )}
     </div>
   );
+}
+
+function SuccessNumber({ value }: { value: number }) {
+  const n = useCountUp(value);
+  return <div className="mt-1 font-display text-6xl font-semibold tabular-nums text-ink">{n}<span className="text-2xl text-muted">%</span></div>;
 }

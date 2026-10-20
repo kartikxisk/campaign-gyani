@@ -25,7 +25,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {children}
         {items.map((t) => (
           <RToast.Root key={t.id} duration={4000} onOpenChange={(o) => !o && setItems((p) => p.filter((x) => x.id !== t.id))}
-            className={`rounded-cg border bg-panel px-4 py-3 text-sm text-ink shadow-cg-pop ${toneClass[t.tone]}`}>
+            className={`cg-animate-toast rounded-cg border bg-panel px-4 py-3 text-sm text-ink shadow-cg-pop ${toneClass[t.tone]}`}>
             <RToast.Title>{t.title}</RToast.Title>
           </RToast.Root>
         ))}

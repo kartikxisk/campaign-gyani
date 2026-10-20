@@ -10,7 +10,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2 font-medium rounded-cg-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none';
+  'inline-flex items-center justify-center gap-2 font-medium rounded-cg-sm transition-[color,background-color,transform] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none';
 const variants: Record<Variant, string> = {
   primary: 'bg-primary text-primary-ink hover:brightness-110',
   secondary: 'bg-panel text-ink border border-line-strong hover:bg-surface',
