@@ -94,6 +94,7 @@ model TargetGroup {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   targets   Target[]
+  campaigns CampaignGroup[]
 
   @@map("target_group")
 }
@@ -130,6 +131,7 @@ model Campaign {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   templates        CampaignTemplate[]
+  groups           CampaignGroup[]
   results          CampaignResult[]
 
   @@index([status, launchedAt])
@@ -146,11 +148,22 @@ model CampaignTemplate {
   @@map("campaign_template")
 }
 
+model CampaignGroup {
+  campaignId String
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  groupId    String
+  group      TargetGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, groupId])
+  @@map("campaign_group")
+}
+
 model CampaignResult {
   id         String          @id @default(cuid())
   campaignId String
   campaign   Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   targetId   String?
+  templateId String?
   email      String
   firstName  String          @default("")
   lastName   String          @default("")
