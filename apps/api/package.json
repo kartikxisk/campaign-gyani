@@ -1,0 +1,14 @@
+{
+  "name": "@cg/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"[api] build placeholder until Task 2\"",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "lint": "true",
+    "typecheck": "echo \"[api] typecheck placeholder\"",
+    "test": "echo \"[api] no tests yet\"",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+  }
+}
