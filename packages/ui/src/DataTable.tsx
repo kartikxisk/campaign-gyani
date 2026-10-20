@@ -23,11 +23,12 @@ export interface DataTableProps<T> {
   search?: { value: string; onChange: (v: string) => void; placeholder?: string };
   pagination?: { page: number; limit: number; total: number; onPage: (p: number) => void };
   rowActions?: (row: T) => ReactNode;
+  onRowClick?: (row: T) => void;
   toolbar?: ReactNode;
   empty?: { title: string; body?: string; action?: ReactNode };
 }
 
-export function DataTable<T>({ columns, rows, rowKey, loading, sort, onSort, search, pagination, rowActions, toolbar, empty }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowKey, loading, sort, onSort, search, pagination, rowActions, onRowClick, toolbar, empty }: DataTableProps<T>) {
   const totalPages = pagination ? Math.max(1, Math.ceil(pagination.total / pagination.limit)) : 1;
   return (
     <div className="space-y-3">
@@ -71,7 +72,7 @@ export function DataTable<T>({ columns, rows, rowKey, loading, sort, onSort, sea
               </td></tr>
             ) : (
               rows.map((row) => (
-                <tr key={rowKey(row)} className="border-b border-line last:border-0 hover:bg-surface/50">
+                <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={cn('border-b border-line last:border-0 hover:bg-surface/50', onRowClick && 'cursor-pointer')}>
                   {columns.map((c) => (
                     <td key={c.key} className={cn('px-4 py-3 text-ink', c.align === 'right' && 'text-right', c.mono && 'font-mono text-[13px] text-ink-soft')}>
                       {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? '')}

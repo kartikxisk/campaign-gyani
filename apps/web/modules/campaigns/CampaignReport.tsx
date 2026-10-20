@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile, DataTable, Drawer, Select, ConfirmDialog, useToast, type Column } from '@cg/ui';
+import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile, DataTable, Drawer, Select, ConfirmDialog, Menu, useToast, type Column } from '@cg/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { parseUA } from '@/lib/ua';
@@ -18,6 +18,7 @@ export function CampaignReport({ id }: { id: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const { notify } = useToast();
+  const download = (path: string) => { const a = document.createElement('a'); a.href = path; a.click(); };
   const campaign = useQuery<Campaign>({ queryKey: ['campaigns', 'item', id], queryFn: () => api.get<Campaign>(`/campaigns/${id}`) });
   const counts = useQuery<Counts>({ queryKey: ['campaigns', id, 'counts'], queryFn: () => api.get<Counts>(`/campaigns/${id}/report`), refetchInterval: 15000 });
   const results = useQuery<Result[]>({ queryKey: ['campaigns', id, 'results'], queryFn: () => api.get<Result[]>(`/campaigns/${id}/results`), refetchInterval: 15000 });
@@ -67,12 +68,15 @@ export function CampaignReport({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone[cam.status] ?? 'neutral'}>{cam.status}</Badge>
             {cam.status !== 'COMPLETE' && <Button variant="secondary" size="sm" onClick={complete}>Mark complete</Button>}
-            {cam.publicEnabled
-              ? <><Button variant="secondary" size="sm" onClick={copyPublic}>Copy public link</Button><Button variant="ghost" size="sm" onClick={() => togglePublic(false)}>Revoke</Button></>
-              : <Button variant="secondary" size="sm" onClick={() => togglePublic(true)}>Share public link</Button>}
-            <a href={`/api/campaigns/${id}/export/results.csv`}><Button variant="ghost" size="sm">Export results</Button></a>
-            <a href={`/api/campaigns/${id}/export/events.csv`}><Button variant="ghost" size="sm">Export events</Button></a>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+            {cam.publicEnabled && <Button variant="secondary" size="sm" onClick={copyPublic}>Copy link</Button>}
+            <Menu label="Actions" items={[
+              cam.publicEnabled
+                ? { label: 'Revoke public link', onSelect: () => togglePublic(false) }
+                : { label: 'Share public link', onSelect: () => togglePublic(true) },
+              { label: 'Export results (CSV)', onSelect: () => download(`/api/campaigns/${id}/export/results.csv`) },
+              { label: 'Export events (CSV)', onSelect: () => download(`/api/campaigns/${id}/export/events.csv`) },
+              { label: 'Delete campaign', onSelect: () => setConfirmDelete(true), destructive: true },
+            ]} />
           </div>
         } />
 
@@ -102,7 +106,7 @@ export function CampaignReport({ id }: { id: string }) {
         <h2 className="font-display text-lg font-semibold text-ink">Results</h2>
         <div className="w-48"><Select options={STATUS_FILTERS} value={filter} onChange={(e) => setFilter(e.target.value)} /></div>
       </div>
-      <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} loading={results.isLoading}
+      <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} loading={results.isLoading} onRowClick={(r) => setOpenResult(r)}
         empty={{ title: 'No results yet', body: 'Results appear as messages are sent.' }}
         rowActions={(r) => <Button variant="ghost" size="sm" onClick={() => setOpenResult(r)}>Timeline</Button>} />
 

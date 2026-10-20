@@ -9,6 +9,7 @@ export { Skeleton, EmptyState } from './Feedback';
 export { Tabs } from './Tabs';
 export { Modal, Drawer } from './Dialog';
 export { ConfirmDialog } from './ConfirmDialog';
+export { Menu, type MenuItem } from './Menu';
 export { ToastProvider, useToast } from './Toast';
 export { DataTable, type Column, type DataTableProps } from './DataTable';
 export { Funnel, Trend, type FunnelStep } from './Charts';
