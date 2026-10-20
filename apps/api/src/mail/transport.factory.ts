@@ -31,7 +31,17 @@ export interface TransportProfile {
   ignoreCertErrors: boolean;
 }
 
-export function buildTransport(profile: TransportProfile, encKey: string, overrideTimeoutMs?: number): Transporter {
+export interface TransportPin {
+  connectHost?: string;
+  servername?: string;
+}
+
+export function buildTransport(
+  profile: TransportProfile,
+  encKey: string,
+  overrideTimeoutMs?: number,
+  pin?: TransportPin,
+): Transporter {
   const options: SMTPTransport.Options & {
     pool?: boolean;
     maxConnections?: number;
@@ -39,7 +49,7 @@ export function buildTransport(profile: TransportProfile, encKey: string, overri
     rateLimit?: number;
     rateDelta?: number;
   } = {
-    host: profile.host,
+    host: pin?.connectHost ?? profile.host,
     port: profile.port,
     secure: profile.port === 465,
     requireTLS: profile.port !== 465,
@@ -49,7 +59,7 @@ export function buildTransport(profile: TransportProfile, encKey: string, overri
     rateLimit: profile.rateLimit,
     rateDelta: 1000,
     auth: { user: profile.username, pass: decryptSecret(profile.passwordEnc, encKey) },
-    tls: { rejectUnauthorized: !profile.ignoreCertErrors },
+    tls: { rejectUnauthorized: !profile.ignoreCertErrors, ...(pin?.servername ? { servername: pin.servername } : {}) },
     ...(overrideTimeoutMs ? { connectionTimeout: overrideTimeoutMs, greetingTimeout: overrideTimeoutMs } : {}),
   };
   return nodemailer.createTransport(options);

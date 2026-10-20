@@ -1,42 +1,55 @@
 import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import ipaddr from 'ipaddr.js';
 
 export const ALLOWED_SMTP_PORTS = new Set([25, 465, 587, 2525]);
 
-function isPrivateIp(ip: string): boolean {
-  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-  if (isIP(ip) === 6) {
-    const low = ip.toLowerCase();
-    return low === '::1' || low.startsWith('fc') || low.startsWith('fd') || low.startsWith('fe80');
-  }
-  const p = ip.split('.').map(Number);
-  if (p.length !== 4 || p.some((n) => Number.isNaN(n))) return true;
-  const [a, b] = p as [number, number, number, number];
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 0) return true;
-  if (a === 169 && b === 254) return true; // link-local + cloud metadata
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  if (a >= 224) return true; // multicast / reserved
-  return false;
-}
-
 export class SmtpTargetError extends Error {}
 
-/** Rejects non-SMTP ports and hosts that resolve to private/loopback/link-local IPs. */
-export async function assertSmtpTarget(host: string, port: number): Promise<void> {
-  if (!ALLOWED_SMTP_PORTS.has(port)) {
-    throw new SmtpTargetError('Port not allowed for SMTP');
+/** True only for globally-routable unicast addresses (IPv4 and IPv6). */
+export function isPublicUnicast(ip: string): boolean {
+  let addr: ipaddr.IPv4 | ipaddr.IPv6;
+  try {
+    addr = ipaddr.parse(ip);
+  } catch {
+    return false;
   }
+  // Unwrap IPv4-mapped / IPv4-compatible IPv6 to judge the real target.
+  if (addr.kind() === 'ipv6') {
+    const v6 = addr as ipaddr.IPv6;
+    if (v6.isIPv4MappedAddress()) addr = v6.toIPv4Address();
+  }
+  return addr.range() === 'unicast';
+}
+
+export interface ValidatedTarget {
+  address: string;
+  servername: string;
+}
+
+/**
+ * Rejects non-SMTP ports and hosts that resolve to non-public addresses, then
+ * returns the validated IP so the caller can connect to it directly (pinning),
+ * closing the DNS-rebinding window between check and connect.
+ */
+export async function assertSmtpTarget(host: string, port: number): Promise<ValidatedTarget> {
+  if (!ALLOWED_SMTP_PORTS.has(port)) throw new SmtpTargetError('Port not allowed for SMTP');
   if (!host) throw new SmtpTargetError('Host is required');
+
+  // A literal IP is validated directly.
+  if (ipaddr.isValid(host)) {
+    if (!isPublicUnicast(host)) throw new SmtpTargetError('Host resolves to a disallowed address');
+    return { address: host, servername: host };
+  }
+
   let addresses: { address: string }[];
   try {
     addresses = await lookup(host, { all: true });
   } catch {
     throw new SmtpTargetError('Host could not be resolved');
   }
-  if (addresses.length === 0 || addresses.some((a) => isPrivateIp(a.address))) {
+  if (addresses.length === 0) throw new SmtpTargetError('Host could not be resolved');
+  if (addresses.some((a) => !isPublicUnicast(a.address))) {
     throw new SmtpTargetError('Host resolves to a disallowed address');
   }
+  return { address: addresses[0]!.address, servername: host };
 }

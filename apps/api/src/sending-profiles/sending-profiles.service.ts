@@ -130,13 +130,15 @@ export class SendingProfilesService {
       };
       from = input.fromAddress ?? input.username ?? 'test@localhost';
     }
+    let pin;
     try {
-      await assertSmtpTarget(transportProfile.host, transportProfile.port);
+      const target = await assertSmtpTarget(transportProfile.host, transportProfile.port);
+      pin = { connectHost: target.address, servername: target.servername };
     } catch (err) {
       if (err instanceof SmtpTargetError) throw new BadRequestException(err.message);
       throw err;
     }
-    const transporter = buildTransport(transportProfile, this.env.SMTP_ENC_KEY, 3000);
+    const transporter = buildTransport(transportProfile, this.env.SMTP_ENC_KEY, 3000, pin);
     try {
       const info = await transporter.sendMail({
         from,
