@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { hashPassword, verifyPassword } from './crypto.util';
+import { hashPassword, verifyPassword, burnVerify } from './crypto.util';
 
 export interface AdminProfile {
   id: string;
@@ -13,7 +13,11 @@ export class AuthService {
 
   async validate(email: string, password: string): Promise<AdminProfile> {
     const admin = await this.prisma.adminUser.findUnique({ where: { email } });
-    if (!admin || !(await verifyPassword(admin.passwordHash, password))) {
+    if (!admin) {
+      await burnVerify(password);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!(await verifyPassword(admin.passwordHash, password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
     return { id: admin.id, email: admin.email };
@@ -22,6 +26,12 @@ export class AuthService {
   async profile(adminId: string): Promise<AdminProfile> {
     const admin = await this.prisma.adminUser.findUniqueOrThrow({ where: { id: adminId } });
     return { id: admin.id, email: admin.email };
+  }
+
+  /** Returns the admin's passwordChangedAt epoch ms, or 0 if never changed. */
+  async passwordChangedAtMs(adminId: string): Promise<number> {
+    const admin = await this.prisma.adminUser.findUnique({ where: { id: adminId } });
+    return admin?.passwordChangedAt ? admin.passwordChangedAt.getTime() : 0;
   }
 
   async changePassword(adminId: string, current: string, next: string): Promise<void> {

@@ -4,5 +4,6 @@ declare module 'express-session' {
   interface SessionData {
     adminId?: string;
     csrfToken?: string;
+    authAt?: number;
   }
 }

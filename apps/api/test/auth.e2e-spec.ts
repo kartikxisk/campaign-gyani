@@ -41,6 +41,41 @@ describe('auth (e2e)', () => {
     expect(noCsrf.status).toBe(403);
   });
 
+  it('rejects a cross-origin login attempt', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .set('Origin', 'http://evil.example.com')
+      .send({ email: EMAIL, password: PASSWORD });
+    expect(res.status).toBe(403);
+  });
+
+  it('invalidates other live sessions after a password change', async () => {
+    const stale: TestAgent = request.agent(app.getHttpServer());
+    await stale.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+    expect((await stale.get('/api/auth/me')).status).toBe(200);
+
+    const active: TestAgent = request.agent(app.getHttpServer());
+    await active.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+    const token = (await active.get('/api/auth/csrf')).body.csrfToken as string;
+    const changed = await active
+      .post('/api/auth/change-password')
+      .set('x-csrf-token', token)
+      .send({ currentPassword: PASSWORD, newPassword: 'rotated789' });
+    expect(changed.status).toBe(200);
+
+    // the stale session, minted before the change, is now rejected
+    expect((await stale.get('/api/auth/me')).status).toBe(401);
+    // the session that performed the change stays valid
+    expect((await active.get('/api/auth/me')).status).toBe(200);
+
+    // restore password
+    const token2 = (await active.get('/api/auth/csrf')).body.csrfToken as string;
+    await active
+      .post('/api/auth/change-password')
+      .set('x-csrf-token', token2)
+      .send({ currentPassword: 'rotated789', newPassword: PASSWORD });
+  });
+
   it('changes the password with a csrf token, then the old password fails and the new one works', async () => {
     const agent: TestAgent = request.agent(app.getHttpServer());
     await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });

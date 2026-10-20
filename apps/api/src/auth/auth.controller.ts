@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UnauthorizedException, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards, UsePipes } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { randomBytes } from 'node:crypto';
 import { loginSchema, type LoginDto } from '@cg/shared';
@@ -13,17 +14,28 @@ const changePasswordSchema = z.object({
 });
 type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
 
+function regenerate(req: Request): Promise<void> {
+  return new Promise<void>((resolve, reject) => req.session.regenerate((e) => (e ? reject(e) : resolve())));
+}
+function save(req: Request): Promise<void> {
+  return new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())));
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @UsePipes(new ZodBodyPipe(loginSchema))
   async login(@Body() dto: LoginDto, @Req() req: Request): Promise<AdminProfile> {
     const admin = await this.auth.validate(dto.email, dto.password);
+    await regenerate(req); // prevent session fixation
     req.session.adminId = admin.id;
     req.session.csrfToken = randomBytes(24).toString('hex');
+    req.session.authAt = Date.now();
+    await save(req);
     return admin;
   }
 
@@ -55,6 +67,9 @@ export class AuthController {
   @UsePipes(new ZodBodyPipe(changePasswordSchema))
   async changePassword(@Body() dto: ChangePasswordDto, @Req() req: Request): Promise<{ ok: true }> {
     await this.auth.changePassword(req.session.adminId as string, dto.currentPassword, dto.newPassword);
+    // Re-anchor the current session so this guard's own check keeps it valid.
+    req.session.authAt = Date.now();
+    await save(req);
     return { ok: true };
   }
 }
