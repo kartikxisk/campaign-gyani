@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { AssetsModule } from './assets/assets.module';
+import { SendingProfilesModule } from './sending-profiles/sending-profiles.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -15,6 +16,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     HealthModule,
     AuthModule,
     AssetsModule,
+    SendingProfilesModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [

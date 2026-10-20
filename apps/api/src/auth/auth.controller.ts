@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { randomBytes } from 'node:crypto';
@@ -28,8 +28,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @UsePipes(new ZodBodyPipe(loginSchema))
-  async login(@Body() dto: LoginDto, @Req() req: Request): Promise<AdminProfile> {
+  async login(@Body(new ZodBodyPipe(loginSchema)) dto: LoginDto, @Req() req: Request): Promise<AdminProfile> {
     const admin = await this.auth.validate(dto.email, dto.password);
     await regenerate(req); // prevent session fixation
     req.session.adminId = admin.id;
@@ -64,8 +63,7 @@ export class AuthController {
   @Post('change-password')
   @HttpCode(200)
   @UseGuards(SessionGuard)
-  @UsePipes(new ZodBodyPipe(changePasswordSchema))
-  async changePassword(@Body() dto: ChangePasswordDto, @Req() req: Request): Promise<{ ok: true }> {
+  async changePassword(@Body(new ZodBodyPipe(changePasswordSchema)) dto: ChangePasswordDto, @Req() req: Request): Promise<{ ok: true }> {
     await this.auth.changePassword(req.session.adminId as string, dto.currentPassword, dto.newPassword);
     // Re-anchor the current session so this guard's own check keeps it valid.
     req.session.authAt = Date.now();
