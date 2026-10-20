@@ -49,7 +49,17 @@ export class CampaignsService {
   async findOne(id: string): Promise<Campaign> {
     const c = await this.prisma.campaign.findUnique({
       where: { id },
-      include: { templates: { include: { template: true } }, landingPage: true, sendingProfile: true },
+      include: {
+        templates: { include: { template: true } },
+        landingPage: true,
+        sendingProfile: {
+          select: {
+            id: true, name: true, provider: true, fromAddress: true, host: true, port: true,
+            username: true, ignoreCertErrors: true, rateLimit: true, maxConnections: true,
+            maxMessages: true, pool: true, headers: true, createdAt: true, updatedAt: true,
+          },
+        },
+      },
     });
     if (!c) throw new NotFoundException('Campaign not found');
     return c;
@@ -80,6 +90,12 @@ export class CampaignsService {
     const sendAt = Math.max(campaign.sendByDate.getTime(), now);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Atomic guard: only one launch wins even under concurrent requests.
+      const flip = await tx.campaign.updateMany({
+        where: { id, status: CampaignStatus.DRAFT },
+        data: { status: sendAt > now ? CampaignStatus.SCHEDULED : CampaignStatus.RUNNING, launchedAt: new Date() },
+      });
+      if (flip.count === 0) throw new ConflictException('Campaign has already been launched');
       const campaignGroups = await tx.campaignGroup.findMany({ where: { campaignId: id }, select: { groupId: true } });
       const groupIdList = campaignGroups.map((g) => g.groupId);
       const targets = await tx.target.findMany({ where: { groupId: { in: groupIdList } } });
@@ -106,13 +122,7 @@ export class CampaignsService {
         });
         created.push(row);
       }
-      const updated = await tx.campaign.update({
-        where: { id },
-        data: {
-          status: sendAt > now ? CampaignStatus.SCHEDULED : CampaignStatus.RUNNING,
-          launchedAt: new Date(),
-        },
-      });
+      const updated = await tx.campaign.findUniqueOrThrow({ where: { id } });
       return { created, updated };
     });
 
