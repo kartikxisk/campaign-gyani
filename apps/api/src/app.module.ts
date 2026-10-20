@@ -13,6 +13,7 @@ import { GroupsModule } from './groups/groups.module';
 import { RenderModule } from './render/render.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { ReportsModule } from './reports/reports.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -29,6 +30,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     RenderModule,
     CampaignsModule,
     TrackingModule,
+    ReportsModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [
