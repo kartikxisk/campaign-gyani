@@ -15,7 +15,7 @@ export class CsrfGuard implements CanActivate {
     if (!MUTATING.has(req.method)) return true;
     // Public victim-facing endpoints are intentionally cross-origin (served from
     // PUBLIC_BASE_URL, not the admin WEB_ORIGIN) and carry no admin session.
-    if (req.path.startsWith('/api/t/')) return true;
+    if (req.path.startsWith('/api/t/') || req.path.startsWith('/api/webhooks/')) return true;
 
     // Origin/Referer check guards every mutation, including unauthenticated
     // ones (login). Browsers always send Origin on cross-site requests, so a

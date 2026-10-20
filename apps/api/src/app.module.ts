@@ -17,6 +17,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ImportModule } from './import/import.module';
 import { SettingsModule } from './settings/settings.module';
 import { SuppressionModule } from './suppression/suppression.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -37,6 +38,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     ImportModule,
     SettingsModule,
     SuppressionModule,
+    WebhooksModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [
