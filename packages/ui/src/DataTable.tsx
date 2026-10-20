@@ -40,7 +40,8 @@ export function DataTable<T>({ columns, rows, rowKey, loading, sort, onSort, sea
         </div>
       )}
       <div className="overflow-hidden rounded-cg border border-line bg-panel shadow-cg">
-        <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[32rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-line bg-surface/60 text-left">
               {columns.map((c) => (
@@ -82,6 +83,7 @@ export function DataTable<T>({ columns, rows, rowKey, loading, sort, onSort, sea
             )}
           </tbody>
         </table>
+        </div>
       </div>
       {pagination && pagination.total > pagination.limit && (
         <div className="flex items-center justify-between text-sm text-muted">

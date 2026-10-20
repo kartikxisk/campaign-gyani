@@ -72,7 +72,7 @@ export default function DashboardPage() {
                 {(recent.data?.rows.length ?? 0) === 0 ? (
                   <div className="px-5 py-8"><EmptyState title="No campaigns yet" body="Launch your first simulation." action={<Link href="/campaigns/new"><Button size="sm">New campaign</Button></Link>} /></div>
                 ) : (
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto"><table className="w-full min-w-[26rem] text-sm">
                     <tbody>
                       {recent.data!.rows.map((c) => (
                         <tr key={c.id} className="border-b border-line last:border-0">
@@ -83,7 +83,7 @@ export default function DashboardPage() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </CardBody>
             </Card>

@@ -8,6 +8,7 @@ import type { AdminProfile } from '@/lib/auth';
 import { Icon } from './icons';
 import { Brand, NavLinks } from './Sidebar';
 import { NAV_GROUPS } from './nav';
+import { ThemeToggle } from './ThemeToggle';
 
 function crumb(pathname: string): string {
   if (pathname === '/') return 'Dashboard';
@@ -30,7 +31,7 @@ export function Topbar({ me }: { me: AdminProfile }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-deck-line bg-deck-2 px-4 py-3 text-deck-ink md:px-6">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-deck-line bg-deck px-4 py-3 text-deck-ink md:px-6">
       <Dialog.Root open={navOpen} onOpenChange={setNavOpen}>
         <Dialog.Trigger className="rounded-cg-sm p-1.5 text-deck-muted hover:bg-white/5 hover:text-deck-ink md:hidden" aria-label="Open navigation">
           <Icon.menu />
@@ -47,6 +48,7 @@ export function Topbar({ me }: { me: AdminProfile }) {
 
       <div className="font-display text-sm font-medium capitalize text-deck-ink">{crumb(pathname)}</div>
       <div className="ml-auto flex items-center gap-3 text-sm">
+        <ThemeToggle />
         <span className="hidden text-deck-muted sm:inline">{me.email}</span>
         <button onClick={logout} className="flex items-center gap-1.5 rounded-cg-sm px-2.5 py-1.5 text-deck-muted transition-colors hover:bg-white/5 hover:text-deck-ink">
           <Icon.logout width={16} height={16} /> Sign out
