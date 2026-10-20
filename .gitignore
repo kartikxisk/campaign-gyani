@@ -9,3 +9,7 @@ dist/
 .superpowers/
 coverage/
 uploads/
+
+# prisma
+.env.test
+uploads-test/
