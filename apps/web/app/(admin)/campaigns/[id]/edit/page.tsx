@@ -6,7 +6,7 @@ import { api } from '@/lib/api-client';
 import type { WizardData } from '@/modules/campaigns/wizard-validate';
 
 interface CampaignDetail {
-  id: string; name: string; status: string; sendByDate: string; shuffleTemplates: boolean;
+  id: string; name: string; status: string; sendByDate: string; shuffleTemplates: boolean; repeat: string | null;
   landingPageId: string | null; sendingProfileId: string | null;
   templates: { templateId: string }[]; groups: { groupId: string }[];
 }
@@ -30,6 +30,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     pageId: data.landingPageId ?? '',
     smtpId: data.sendingProfileId ?? '',
     sendByDate: data.sendByDate ? toLocalInput(data.sendByDate) : '',
+    repeat: (data.repeat as WizardData['repeat']) ?? 'NONE',
   };
   return <CampaignWizard editId={id} initial={initial} />;
 }

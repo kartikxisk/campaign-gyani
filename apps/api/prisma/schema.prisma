@@ -129,6 +129,9 @@ model Campaign {
   shuffleTemplates Boolean            @default(false)
   publicCode       String?            @unique
   publicEnabled    Boolean            @default(false)
+  repeat           String?
+  nextRunAt        DateTime?
+  parentId         String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   templates        CampaignTemplate[]

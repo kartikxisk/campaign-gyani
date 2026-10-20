@@ -77,6 +77,7 @@ export const campaignCreateSchema = z
     smtpId: nonEmpty('Sending profile'),
     groupIds: z.array(z.string()).min(1, 'Select at least one group'),
     shuffleTemplates: z.boolean().optional(),
+    repeat: z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY']).optional(),
     recommendedTrainings: z
       .object({
         lowrisk: z.array(z.string()).default([]),

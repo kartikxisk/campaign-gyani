@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { CampaignStatus, ResultStatus, type Campaign } from '@prisma/client';
-import type { CampaignCreateDto } from '@cg/shared';
+import { advance, type Repeat, type CampaignCreateDto } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
 import { SEND_QUEUE, type SendQueue } from '../sending/send-queue.port';
@@ -33,6 +33,7 @@ export class CampaignsService {
         landingPageId: dto.pageId ?? null,
         sendingProfileId: dto.smtpId,
         shuffleTemplates: dto.shuffleTemplates ?? false,
+        repeat: dto.repeat ?? 'NONE',
         status: CampaignStatus.DRAFT,
         templates: { create: dto.templateIds.map((templateId) => ({ templateId })) },
         groups: { create: dto.groupIds.map((groupId) => ({ groupId })) },
@@ -61,6 +62,7 @@ export class CampaignsService {
           landingPageId: dto.pageId ?? null,
           sendingProfileId: dto.smtpId,
           shuffleTemplates: dto.shuffleTemplates ?? false,
+          repeat: dto.repeat ?? 'NONE',
           templates: { create: dto.templateIds.map((templateId) => ({ templateId })) },
           groups: { create: dto.groupIds.map((groupId) => ({ groupId })) },
         },
@@ -189,6 +191,10 @@ export class CampaignsService {
     });
 
     await this.queue.enqueue(result.created.map((r) => ({ resultId: r.id, sendAt })));
+    if (campaign.repeat && campaign.repeat !== 'NONE' && !campaign.parentId) {
+      const next = advance(new Date(sendAt), campaign.repeat as Repeat);
+      await this.prisma.campaign.update({ where: { id }, data: { nextRunAt: next } });
+    }
     return result.updated;
   }
 

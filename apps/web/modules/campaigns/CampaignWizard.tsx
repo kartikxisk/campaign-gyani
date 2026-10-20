@@ -1,14 +1,14 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardBody, Combobox, Field, Input, MultiSelect, useToast, cn } from '@cg/ui';
+import { Button, Card, CardBody, Combobox, Field, Input, MultiSelect, Select, useToast, cn } from '@cg/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { useAllOptions } from '@/lib/resource';
 import { api } from '@/lib/api-client';
 import { useMode } from '@/lib/mode';
 import { stepsFor, validateStep, toCreatePayload, type WizardData, type StepKey } from './wizard-validate';
 
-const initial: WizardData = { name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '' };
+const initial: WizardData = { name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '', repeat: 'NONE' };
 
 export function CampaignWizard({ editId, initial: initialProp }: { editId?: string; initial?: Partial<WizardData> } = {}) {
   const router = useRouter();
@@ -75,7 +75,12 @@ export function CampaignWizard({ editId, initial: initialProp }: { editId?: stri
     ),
     landing: <Field label="Landing page" error={error ?? undefined}><Combobox options={pages} value={d.pageId} onChange={(v) => setD({ ...d, pageId: v })} /></Field>,
     profile: <Field label="Sending profile" error={error ?? undefined}><Combobox options={profiles} value={d.smtpId} onChange={(v) => setD({ ...d, smtpId: v })} /></Field>,
-    schedule: <Field label="Send by" error={error ?? undefined} hint="A time in the past sends immediately."><Input type="datetime-local" value={d.sendByDate} onChange={(e) => setD({ ...d, sendByDate: e.target.value })} /></Field>,
+    schedule: (
+      <div className="space-y-4">
+        <Field label="Send by" error={error ?? undefined} hint="A time in the past sends immediately."><Input type="datetime-local" value={d.sendByDate} onChange={(e) => setD({ ...d, sendByDate: e.target.value })} /></Field>
+        <Field label="Repeat" hint="Recurring campaigns re-send on this cadence as a fresh run."><Select options={[{ value: 'NONE', label: 'Does not repeat' }, { value: 'DAILY', label: 'Daily' }, { value: 'WEEKLY', label: 'Weekly' }, { value: 'MONTHLY', label: 'Monthly' }]} value={d.repeat} onChange={(e) => setD({ ...d, repeat: e.target.value as WizardData['repeat'] })} /></Field>
+      </div>
+    ),
     review: (
       <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
         <dt className="text-muted">Name</dt><dd className="text-ink">{d.name}</dd>
@@ -84,6 +89,7 @@ export function CampaignWizard({ editId, initial: initialProp }: { editId?: stri
         {!email && <><dt className="text-muted">Landing</dt><dd className="text-ink">{nameOf(pages, d.pageId)}</dd></>}
         <dt className="text-muted">Profile</dt><dd className="text-ink">{nameOf(profiles, d.smtpId)}</dd>
         <dt className="text-muted">Send by</dt><dd className="text-ink">{d.sendByDate || '—'}</dd>
+        {d.repeat !== 'NONE' && <><dt className="text-muted">Repeat</dt><dd className="text-ink">{d.repeat.toLowerCase()}</dd></>}
       </dl>
     ),
   };

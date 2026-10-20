@@ -6,6 +6,7 @@ export interface WizardData {
   pageId: string;
   smtpId: string;
   sendByDate: string;
+  repeat: 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
 }
 
 export type StepKey = 'name' | 'audience' | 'email' | 'landing' | 'profile' | 'schedule' | 'review';
@@ -49,5 +50,6 @@ export function toCreatePayload(d: WizardData, email: boolean) {
     pageId: email ? undefined : d.pageId,
     smtpId: d.smtpId,
     sendByDate: new Date(d.sendByDate).toISOString(),
+    repeat: d.repeat,
   };
 }

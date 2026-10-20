@@ -4,11 +4,12 @@ import { SendingModule } from '../sending/sending.module';
 import { SettingsModule } from '../settings/settings.module';
 import { SuppressionModule } from '../suppression/suppression.module';
 import { CampaignsService } from './campaigns.service';
+import { RecurrenceService } from './recurrence.service';
 import { CampaignsController } from './campaigns.controller';
 
 @Module({
   imports: [AuthModule, SendingModule, SettingsModule, SuppressionModule],
-  providers: [CampaignsService],
+  providers: [CampaignsService, RecurrenceService],
   controllers: [CampaignsController],
   exports: [CampaignsService],
 })

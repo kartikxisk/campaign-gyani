@@ -10,7 +10,7 @@ import { parseUA } from '@/lib/ua';
 import { useMode } from '@/lib/mode';
 import { openRate, clickRate } from '@cg/shared';
 
-interface Campaign { id: string; name: string; status: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; }
+interface Campaign { id: string; name: string; status: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; repeat?: string | null; nextRunAt?: string | null; }
 interface Counts { sent: number; opened: number; clicked: number; submitted: number; reported: number; successRate: number; }
 interface Result { id: string; email: string; firstName: string; lastName: string; position: string; status: string; reported: boolean; error?: string | null; }
 interface Event { id: string; resultId: string; type: string; ip?: string; userAgent?: string; createdAt: string; payload?: Record<string, unknown>; }
@@ -71,7 +71,7 @@ export function CampaignReport({ id }: { id: string }) {
   return (
     <div>
       <PageHeader title={cam.name}
-        subtitle={cam.launchedAt ? `Launched ${new Date(cam.launchedAt).toLocaleString()}` : 'Not launched'}
+        subtitle={[cam.launchedAt ? `Launched ${new Date(cam.launchedAt).toLocaleString()}` : 'Not launched', cam.repeat && cam.repeat !== 'NONE' ? `Repeats ${cam.repeat.toLowerCase()}${cam.nextRunAt ? ` · next ${new Date(cam.nextRunAt).toLocaleDateString()}` : ''}` : ''].filter(Boolean).join(' · ')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone[cam.status] ?? 'neutral'}>{cam.status}</Badge>
