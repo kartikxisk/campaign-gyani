@@ -1,0 +1,14 @@
+/** @type {import('next').NextConfig} */
+const API_URL = process.env.API_URL ?? 'http://localhost:8080';
+
+const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['@cg/ui'],
+  async rewrites() {
+    return [
+      { source: '/api/:path*', destination: `${API_URL}/api/:path*` },
+      { source: '/v/:rid', destination: `${API_URL}/v/:rid` },
+    ];
+  },
+};
+export default nextConfig;

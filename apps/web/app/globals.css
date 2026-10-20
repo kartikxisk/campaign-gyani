@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Campaign-Gyani "signal console" tokens (kept in sync with packages/ui/src/tokens.css). */
+:root {
+  --cg-ink: #141a1f; --cg-ink-soft: #46535c; --cg-muted: #6b7a84;
+  --cg-surface: #f7f9fa; --cg-panel: #ffffff; --cg-line: #e3e8ec; --cg-line-strong: #cbd4da;
+  --cg-primary: #0e7490; --cg-primary-ink: #ffffff; --cg-primary-soft: #e0f2f7;
+  --cg-sent: #64748b; --cg-opened: #2563eb; --cg-clicked: #d97706; --cg-submitted: #dc2626; --cg-reported: #059669;
+  --cg-danger: #dc2626; --cg-danger-soft: #fdeaea; --cg-ok: #059669; --cg-warn: #d97706;
+  --cg-radius: 10px; --cg-radius-sm: 6px;
+  --cg-shadow: 0 1px 2px rgba(20,26,31,.06), 0 1px 3px rgba(20,26,31,.04);
+  --cg-shadow-pop: 0 10px 30px rgba(20,26,31,.14);
+  --cg-font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --cg-font-display: 'Space Grotesk', 'Inter', ui-sans-serif, sans-serif;
+  --cg-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --cg-ink: #e7edf1; --cg-ink-soft: #aeb9c1; --cg-muted: #7d8a93;
+    --cg-surface: #0f151a; --cg-panel: #161e25; --cg-line: #243038; --cg-line-strong: #324049;
+    --cg-primary: #22a7c4; --cg-primary-soft: #0d2a33; --cg-danger-soft: #2a1414;
+  }
+}
+:root[data-theme='dark'] {
+  --cg-ink: #e7edf1; --cg-ink-soft: #aeb9c1; --cg-muted: #7d8a93;
+  --cg-surface: #0f151a; --cg-panel: #161e25; --cg-line: #243038; --cg-line-strong: #324049;
+  --cg-primary: #22a7c4; --cg-primary-soft: #0d2a33; --cg-danger-soft: #2a1414;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--cg-surface); color: var(--cg-ink);
+  font-family: var(--cg-font-sans); -webkit-font-smoothing: antialiased;
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
