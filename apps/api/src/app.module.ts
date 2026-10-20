@@ -10,6 +10,7 @@ import { SendingProfilesModule } from './sending-profiles/sending-profiles.modul
 import { TemplatesModule } from './templates/templates.module';
 import { LandingPagesModule } from './landing-pages/landing-pages.module';
 import { GroupsModule } from './groups/groups.module';
+import { RenderModule } from './render/render.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -23,6 +24,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     TemplatesModule,
     LandingPagesModule,
     GroupsModule,
+    RenderModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [
