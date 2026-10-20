@@ -208,9 +208,10 @@ model Suppression {
 }
 
 model AppSetting {
-  id    String  @id @default("app")
-  mode  String?
-  setAt DateTime?
+  id            String    @id @default("app")
+  mode          String?
+  webhookSecret String?
+  setAt         DateTime?
 
   @@map("app_setting")
 }

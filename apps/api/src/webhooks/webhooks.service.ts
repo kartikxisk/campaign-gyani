@@ -1,10 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { ResultStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SuppressionService } from '../suppression/suppression.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
-import { hmacSign, safeStringEqual } from '../auth/crypto.util';
+import { safeStringEqual } from '../auth/crypto.util';
 
 @Injectable()
 export class WebhooksService {
@@ -14,21 +15,41 @@ export class WebhooksService {
     @Inject(ENV) private readonly env: Pick<Env, 'SESSION_SECRET' | 'PUBLIC_BASE_URL'>,
   ) {}
 
-  token(): string {
-    return hmacSign('webhook-suppress-v1', this.env.SESSION_SECRET);
+  private readonly logger = new Logger(WebhooksService.name);
+
+  /** A dedicated, rotatable webhook secret stored in the DB (not derived from SESSION_SECRET). */
+  async secret(): Promise<string> {
+    const row = await this.prisma.appSetting.findUnique({ where: { id: 'app' } });
+    if (row?.webhookSecret) return row.webhookSecret;
+    const generated = randomBytes(24).toString('hex');
+    await this.prisma.appSetting.upsert({
+      where: { id: 'app' },
+      create: { id: 'app', webhookSecret: generated },
+      update: { webhookSecret: row?.webhookSecret ?? generated },
+    });
+    const after = await this.prisma.appSetting.findUniqueOrThrow({ where: { id: 'app' } });
+    return after.webhookSecret as string;
   }
 
-  url(): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/webhooks/suppress?token=${this.token()}`;
+  async rotate(): Promise<string> {
+    const generated = randomBytes(24).toString('hex');
+    await this.prisma.appSetting.upsert({ where: { id: 'app' }, create: { id: 'app', webhookSecret: generated }, update: { webhookSecret: generated } });
+    return this.url(generated);
   }
 
-  verify(token: string | undefined): boolean {
-    return Boolean(token) && safeStringEqual(token as string, this.token());
+  url(secret: string): string {
+    return `${this.env.PUBLIC_BASE_URL}/api/webhooks/suppress?token=${secret}`;
+  }
+
+  async verify(token: string | undefined): Promise<boolean> {
+    if (!token) return false;
+    return safeStringEqual(token, await this.secret());
   }
 
   /** Suppresses an address (bounce/complaint/unsubscribe) and fails its still-pending sends. */
   async suppress(email: string, reason = 'bounce'): Promise<{ suppressed: string }> {
     const normalized = email.trim().toLowerCase();
+    this.logger.warn(`Webhook suppression: ${normalized} (${reason})`);
     await this.suppression.add(normalized, reason);
     await this.prisma.campaignResult.updateMany({
       where: { email: { equals: normalized, mode: 'insensitive' }, status: { in: [ResultStatus.SCHEDULED, ResultStatus.SENDING] } },
