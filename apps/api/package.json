@@ -28,7 +28,8 @@
     "helmet": "8.0.0",
     "cookie-parser": "1.4.7",
     "zod": "3.24.1",
-    "dotenv": "16.4.7"
+    "dotenv": "16.4.7",
+    "@node-rs/argon2": "2.0.2"
   },
   "devDependencies": {
     "@nestjs/testing": "10.4.15",

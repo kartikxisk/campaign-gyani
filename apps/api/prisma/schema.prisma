@@ -7,6 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  COMPLETE
+}
+
+enum ResultStatus {
+  SCHEDULED
+  SENDING
+  SENT
+  OPENED
+  CLICKED
+  SUBMITTED
+  REPORTED
+  ERROR
+}
+
 model AdminUser {
   id                String    @id @default(cuid())
   email             String    @unique
@@ -16,4 +34,161 @@ model AdminUser {
   passwordChangedAt DateTime?
 
   @@map("admin_user")
+}
+
+model SendingProfile {
+  id               String     @id @default(cuid())
+  name             String
+  provider         String
+  fromAddress      String
+  host             String
+  port             Int
+  username         String
+  passwordEnc      String
+  ignoreCertErrors Boolean    @default(false)
+  rateLimit        Int        @default(10)
+  maxConnections   Int        @default(5)
+  maxMessages      Int        @default(100)
+  pool             Boolean    @default(true)
+  headers          Json       @default("[]")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  campaigns        Campaign[]
+
+  @@map("sending_profile")
+}
+
+model EmailTemplate {
+  id             String             @id @default(cuid())
+  name           String
+  envelopeSender String
+  subject        String
+  textBody       String             @default("")
+  htmlBody       String             @default("")
+  externalUrl    String?
+  attachments    Json               @default("[]")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  campaigns      CampaignTemplate[]
+
+  @@map("email_template")
+}
+
+model LandingPage {
+  id               String     @id @default(cuid())
+  name             String
+  html             String
+  redirectUrl      String
+  captureData      Boolean    @default(false)
+  capturePasswords Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  campaigns        Campaign[]
+
+  @@map("landing_page")
+}
+
+model TargetGroup {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  targets   Target[]
+
+  @@map("target_group")
+}
+
+model Target {
+  id        String      @id @default(cuid())
+  groupId   String
+  group     TargetGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  email     String
+  firstName String      @default("")
+  lastName  String      @default("")
+  position  String      @default("")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([groupId, email])
+  @@map("target")
+}
+
+model Campaign {
+  id               String             @id @default(cuid())
+  name             String
+  status           CampaignStatus     @default(DRAFT)
+  sendByDate       DateTime
+  launchedAt       DateTime?
+  completedAt      DateTime?
+  landingPageId    String?
+  landingPage      LandingPage?       @relation(fields: [landingPageId], references: [id])
+  sendingProfileId String?
+  sendingProfile   SendingProfile?    @relation(fields: [sendingProfileId], references: [id])
+  shuffleTemplates Boolean            @default(false)
+  publicCode       String?            @unique
+  publicEnabled    Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  templates        CampaignTemplate[]
+  results          CampaignResult[]
+
+  @@index([status, launchedAt])
+  @@map("campaign")
+}
+
+model CampaignTemplate {
+  campaignId String
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  templateId String
+  template   EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, templateId])
+  @@map("campaign_template")
+}
+
+model CampaignResult {
+  id         String          @id @default(cuid())
+  campaignId String
+  campaign   Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetId   String?
+  email      String
+  firstName  String          @default("")
+  lastName   String          @default("")
+  position   String          @default("")
+  status     ResultStatus    @default(SCHEDULED)
+  rid        String          @unique
+  reported   Boolean         @default(false)
+  error      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  events     CampaignEvent[]
+
+  @@index([campaignId, status])
+  @@map("campaign_result")
+}
+
+model CampaignEvent {
+  id        String         @id @default(cuid())
+  resultId  String
+  result    CampaignResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  type      String
+  ip        String?
+  userAgent String?
+  payload   Json?
+  createdAt DateTime       @default(now())
+
+  @@index([resultId, type])
+  @@map("campaign_event")
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  filename  String
+  path      String
+  mimetype  String
+  size      Int
+  kind      String
+  createdAt DateTime @default(now())
+
+  @@map("asset")
 }
