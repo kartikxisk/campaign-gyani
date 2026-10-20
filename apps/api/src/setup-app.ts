@@ -8,6 +8,7 @@ import type { Env } from './config/env';
 
 export async function configureApp(app: INestApplication, env: Env): Promise<void> {
   app.setGlobalPrefix('api', { exclude: ['v/:rid', 'r/:code'] });
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser(env.SESSION_SECRET));
 

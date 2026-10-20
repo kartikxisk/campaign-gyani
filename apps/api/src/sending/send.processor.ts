@@ -25,6 +25,8 @@ export class SendProcessor {
     });
     if (!result) return;
     if (TERMINAL.has(result.status)) return; // already progressed; don't resend
+    // Don't send for a campaign that is completed, still draft, or deleted.
+    if (result.campaign.status !== 'SCHEDULED' && result.campaign.status !== 'RUNNING') return;
     const profile = result.campaign.sendingProfile;
     if (!profile) {
       await this.fail(resultId, 'No sending profile configured', attempt, maxAttempts);
@@ -49,13 +51,9 @@ export class SendProcessor {
     const html = this.render.renderForRecipient(template.htmlBody, ctx, result.rid);
     const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(result.rid) });
 
+    let info: { messageId: string };
     try {
-      const info = await this.mailer.send(profile, { from: template.envelopeSender, to: result.email, subject, html });
-      this.circuit.recordSuccess(profile.host);
-      await this.prisma.$transaction([
-        this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.SENT, error: null } }),
-        this.prisma.campaignEvent.create({ data: { resultId, type: 'SENT', payload: { messageId: info.messageId } } }),
-      ]);
+      info = await this.mailer.send(profile, { from: template.envelopeSender, to: result.email, subject, html });
     } catch (err) {
       this.circuit.recordFailure(profile.host);
       const reason = (err as Error).message;
@@ -65,6 +63,17 @@ export class SendProcessor {
       }
       this.logger.warn(`Send attempt ${attempt}/${maxAttempts} for ${resultId} failed: ${reason}`);
       throw err; // let the queue retry
+    }
+    // The message is already out. A failure here must NOT rethrow, or the queue
+    // would resend to the same recipient; log and move on instead.
+    this.circuit.recordSuccess(profile.host);
+    try {
+      await this.prisma.$transaction([
+        this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.SENT, error: null } }),
+        this.prisma.campaignEvent.create({ data: { resultId, type: 'SENT', payload: { messageId: info.messageId } } }),
+      ]);
+    } catch (dbErr) {
+      this.logger.error(`Message sent for ${resultId} but recording SENT failed: ${(dbErr as Error).message}`);
     }
   }
 

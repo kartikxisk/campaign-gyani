@@ -6,6 +6,26 @@ import type { MergeContext } from '@cg/shared';
 // Matches a well-formed Go-style token: {{ .FieldName }}. An unclosed `{{.`
 // does not match and is left as literal text.
 const TOKEN = /\{\{\s*\.(\w+)\s*\}\}/g;
+const URL_FIELDS = new Set(['URL', 'ExternalURL']);
+
+function escapeHtml(v: string): string {
+  return v
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeUrl(v: string): string {
+  try {
+    const u = new URL(v);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+  } catch {
+    return '';
+  }
+  return v;
+}
 
 @Injectable()
 export class RenderService {
@@ -24,7 +44,10 @@ export class RenderService {
   renderTemplate(html: string, ctx: MergeContext): string {
     return html.replace(TOKEN, (_m, field: string) => {
       const value = (ctx as Record<string, unknown>)[field];
-      return value == null ? '' : String(value);
+      if (value == null) return '';
+      const raw = String(value);
+      // Escape every interpolated value; URL-typed fields also get a scheme allowlist.
+      return escapeHtml(URL_FIELDS.has(field) ? safeUrl(raw) : raw);
     });
   }
 

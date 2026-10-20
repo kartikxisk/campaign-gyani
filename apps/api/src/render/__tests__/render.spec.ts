@@ -18,6 +18,15 @@ describe('renderTemplate', () => {
   it('leaves a malformed/unclosed token as literal text', () => {
     expect(svc.renderTemplate('x {{.FirstName y', ctx)).toBe('x {{.FirstName y');
   });
+  it('HTML-escapes interpolated values to prevent XSS', () => {
+    const out = svc.renderTemplate('Hi {{.FirstName}}', { FirstName: '<script>alert(1)</script>' } as never);
+    expect(out).toBe('Hi &lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+  it('blanks a javascript: URL in a URL-typed token', () => {
+    const out = svc.renderTemplate('{{.ExternalURL}}', { ExternalURL: 'javascript:alert(1)' } as never);
+    expect(out).toBe('');
+  });
+
   it('renders a missing context field as empty', () => {
     expect(svc.renderTemplate('Hi {{.FirstName}}', {})).toBe('Hi ');
   });

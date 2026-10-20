@@ -39,7 +39,7 @@ describe('SendProcessor.deliver', () => {
     const tpl = await prisma.emailTemplate.create({ data: { name: 'T', envelopeSender: 'IT <it@b.com>', subject: 'Hi {{.FirstName}}', htmlBody: '<p>Hi {{.FirstName}} <a href="https://bank.test">go</a></p>' } });
     const smtp = await prisma.sendingProfile.create({ data: { name: 'P', provider: 'custom', fromAddress: 'it@b.com', host: 'smtp.sender.test', port: 587, username: 'u', passwordEnc: 'e' } });
     const page = await prisma.landingPage.create({ data: { name: 'L', html: '<form></form>', redirectUrl: 'https://x.com' } });
-    const campaign = await prisma.campaign.create({ data: { name: 'C', sendByDate: new Date(), sendingProfileId: smtp.id, landingPageId: page.id, templates: { create: [{ templateId: tpl.id }] } } });
+    const campaign = await prisma.campaign.create({ data: { name: 'C', status: 'RUNNING', sendByDate: new Date(), sendingProfileId: smtp.id, landingPageId: page.id, templates: { create: [{ templateId: tpl.id }] } } });
     const result = await prisma.campaignResult.create({ data: { campaignId: campaign.id, templateId: tpl.id, email: 'ada@corp.com', firstName: 'Ada', rid: 'RID1' } });
     return { result, smtp };
   }
@@ -72,6 +72,17 @@ describe('SendProcessor.deliver', () => {
     await expect(proc.deliver(result.id, 1, 3)).rejects.toThrow();
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
     expect(after.status).not.toBe('ERROR');
+  });
+
+  it('does not send for a completed campaign', async () => {
+    const mailer = new FakeMailer('ok');
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit());
+    const { result } = await makeResult();
+    await prisma.campaign.updateMany({ data: { status: 'COMPLETE' } });
+    await proc.deliver(result.id, 1, 3);
+    expect(mailer.sent).toHaveLength(0);
+    const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
+    expect(after.status).toBe('SCHEDULED');
   });
 
   it('skips sending when the host breaker is open', async () => {
