@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { CampaignStatus, type Campaign } from '@prisma/client';
+import { CampaignStatus, ResultStatus, type Campaign } from '@prisma/client';
 import type { CampaignCreateDto } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
@@ -65,15 +65,18 @@ export class CampaignsService {
     return c;
   }
 
+  // Event-based counts so the list matches the report (status is monotonic and
+  // would hide OPENED once a result reaches CLICKED).
   async counts(campaignId: string): Promise<Record<string, number>> {
-    const grouped = await this.prisma.campaignResult.groupBy({
-      by: ['status'],
-      where: { campaignId },
-      _count: { _all: true },
-    });
-    const out: Record<string, number> = {};
-    for (const g of grouped) out[g.status] = g._count._all;
-    return out;
+    const SENT_RANK = [ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED];
+    const [sent, opened, clicked, submitted, reported] = await this.prisma.$transaction([
+      this.prisma.campaignResult.count({ where: { campaignId, status: { in: SENT_RANK } } }),
+      this.prisma.campaignResult.count({ where: { campaignId, events: { some: { type: 'OPENED' } } } }),
+      this.prisma.campaignResult.count({ where: { campaignId, events: { some: { type: 'CLICKED' } } } }),
+      this.prisma.campaignResult.count({ where: { campaignId, events: { some: { type: 'SUBMITTED' } } } }),
+      this.prisma.campaignResult.count({ where: { campaignId, reported: true } }),
+    ]);
+    return { SENT: sent, OPENED: opened, CLICKED: clicked, SUBMITTED: submitted, REPORTED: reported };
   }
 
   async launch(id: string): Promise<Campaign> {

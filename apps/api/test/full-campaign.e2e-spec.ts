@@ -54,6 +54,13 @@ describe('full campaign loop (e2e)', () => {
     expect(before.reported).toBe(0);
     expect(before.successRate).toBe(100);
 
+    // The campaigns LIST shows the same event-based counts as the report.
+    const list = (await agent.get('/api/campaigns?query=Full%20loop&limit=50')).body;
+    const listed = list.rows.find((c: { id: string }) => c.id === campaign.id);
+    expect(listed.counts.OPENED).toBe(1);
+    expect(listed.counts.CLICKED).toBe(1);
+    expect(listed.counts.SUBMITTED).toBe(1);
+
     // Reporting the mail cancels the catch.
     expect((await request(app.getHttpServer()).get(`/api/t/r/${rid}`)).status).toBe(200);
     const report = (await agent.get(`/api/campaigns/${campaign.id}/report`)).body;
