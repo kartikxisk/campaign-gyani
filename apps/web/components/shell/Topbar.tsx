@@ -31,7 +31,7 @@ export function Topbar({ me }: { me: AdminProfile }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-deck-line bg-deck px-4 py-3 text-deck-ink md:px-6">
+    <header className="sticky top-0 z-30 flex items-center gap-3 bg-deck px-4 py-3 text-deck-ink md:px-6">
       <Dialog.Root open={navOpen} onOpenChange={setNavOpen}>
         <Dialog.Trigger className="rounded-cg-sm p-1.5 text-deck-muted hover:bg-white/5 hover:text-deck-ink md:hidden" aria-label="Open navigation">
           <Icon.menu />

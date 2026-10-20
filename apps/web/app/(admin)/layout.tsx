@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar me={me} />
-        <main className="flex-1 bg-surface px-4 py-6 md:rounded-tl-[20px] md:px-8 md:py-8">
+        <main className="flex-1 bg-surface px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>
