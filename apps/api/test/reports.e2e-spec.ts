@@ -55,6 +55,13 @@ describe('reports (e2e)', () => {
     expect(events.text.split('\n')[0]).toContain('Type');
   });
 
+  it('exports a campaigns summary CSV', async () => {
+    const res = await agent.get('/api/reports/campaigns.csv');
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.text.split('\n')[0]).toContain('Success %');
+    expect(res.text).toContain('rep');
+  });
+
   it('serves a public report by code without admin fields, 404 on a bad code', async () => {
     await agent.patch(`/api/campaigns/${campaignId}/visibility`).set('x-csrf-token', csrf).send({ enabled: true });
     const code = (await agent.get(`/api/campaigns/${campaignId}`)).body.publicCode;

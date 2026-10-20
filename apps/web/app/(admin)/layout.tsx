@@ -14,15 +14,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [isLoading, me, router]);
 
   if (isLoading || !me) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-muted">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-deck text-sm text-deck-muted">
+        <span className="animate-pulse">Loading console…</span>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-deck">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar me={me} />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6">{children}</main>
+        <main className="flex-1 bg-surface px-4 py-6 md:rounded-tl-[20px] md:px-8 md:py-8">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
       </div>
     </div>
   );

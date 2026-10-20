@@ -24,7 +24,7 @@ export class NodemailerMailer implements Mailer {
 
   async send(profile: SendingProfile, message: OutgoingMessage): Promise<{ messageId: string }> {
     const target = await assertSmtpTarget(profile.host, profile.port);
-    const transporter = buildTransport(profile, this.env.SMTP_ENC_KEY, undefined, {
+    const transporter = buildTransport(profile, this.env.SMTP_ENC_KEY, 15_000, {
       connectHost: target.address,
       servername: target.servername,
     });

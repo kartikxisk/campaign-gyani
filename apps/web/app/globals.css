@@ -2,36 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Campaign-Gyani "signal console" tokens (kept in sync with packages/ui/src/tokens.css). */
+/* "command deck" tokens — kept in sync with packages/ui/src/tokens.css. */
 :root {
-  --cg-ink: #141a1f; --cg-ink-soft: #46535c; --cg-muted: #6b7a84;
-  --cg-surface: #f7f9fa; --cg-panel: #ffffff; --cg-line: #e3e8ec; --cg-line-strong: #cbd4da;
-  --cg-primary: #0e7490; --cg-primary-ink: #ffffff; --cg-primary-soft: #e0f2f7;
-  --cg-sent: #64748b; --cg-opened: #2563eb; --cg-clicked: #d97706; --cg-submitted: #dc2626; --cg-reported: #059669;
-  --cg-danger: #dc2626; --cg-danger-soft: #fdeaea; --cg-ok: #059669; --cg-warn: #d97706;
-  --cg-radius: 10px; --cg-radius-sm: 6px;
-  --cg-shadow: 0 1px 2px rgba(20,26,31,.06), 0 1px 3px rgba(20,26,31,.04);
-  --cg-shadow-pop: 0 10px 30px rgba(20,26,31,.14);
-  --cg-font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --cg-font-display: 'Space Grotesk', 'Inter', ui-sans-serif, sans-serif;
-  --cg-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --cg-ink: #131922; --cg-ink-soft: #4a5666; --cg-muted: #7a8798;
+  --cg-surface: #edf0f4; --cg-panel: #ffffff; --cg-panel-2: #f7f9fb;
+  --cg-line: #e2e7ee; --cg-line-strong: #cdd5e0;
+  --cg-deck: #0e1118; --cg-deck-2: #141922; --cg-deck-line: #232a36; --cg-deck-ink: #e6ebf2; --cg-deck-muted: #8795a6;
+  --cg-primary: #0891b2; --cg-primary-ink: #ffffff; --cg-primary-soft: #e2f3f8;
+  --cg-sent: #64748b; --cg-opened: #3b82f6; --cg-clicked: #f59e0b; --cg-submitted: #e11d48; --cg-reported: #10b981;
+  --cg-danger: #e11d48; --cg-danger-soft: #fde7ec; --cg-ok: #10b981; --cg-warn: #f59e0b;
+  --cg-radius: 14px; --cg-radius-sm: 8px;
+  --cg-shadow: 0 1px 2px rgba(19,25,34,.05), 0 2px 8px rgba(19,25,34,.04);
+  --cg-shadow-pop: 0 18px 50px rgba(10,14,22,.28);
+  --cg-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --cg-font-display: var(--font-sora), var(--font-inter), ui-sans-serif, sans-serif;
+  --cg-font-mono: var(--font-mono), ui-monospace, 'SFMono-Regular', monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --cg-ink: #e7edf1; --cg-ink-soft: #aeb9c1; --cg-muted: #7d8a93;
-    --cg-surface: #0f151a; --cg-panel: #161e25; --cg-line: #243038; --cg-line-strong: #324049;
-    --cg-primary: #22a7c4; --cg-primary-soft: #0d2a33; --cg-danger-soft: #2a1414;
+    --cg-ink: #e6ebf2; --cg-ink-soft: #aab6c5; --cg-muted: #74818f;
+    --cg-surface: #0b0e14; --cg-panel: #141922; --cg-panel-2: #10141c;
+    --cg-line: #232a36; --cg-line-strong: #323b4a;
+    --cg-primary: #1bb5d4; --cg-primary-soft: #0d2730; --cg-danger-soft: #2a1118;
   }
 }
 :root[data-theme='dark'] {
-  --cg-ink: #e7edf1; --cg-ink-soft: #aeb9c1; --cg-muted: #7d8a93;
-  --cg-surface: #0f151a; --cg-panel: #161e25; --cg-line: #243038; --cg-line-strong: #324049;
-  --cg-primary: #22a7c4; --cg-primary-soft: #0d2a33; --cg-danger-soft: #2a1414;
+  --cg-ink: #e6ebf2; --cg-ink-soft: #aab6c5; --cg-muted: #74818f;
+  --cg-surface: #0b0e14; --cg-panel: #141922; --cg-panel-2: #10141c;
+  --cg-line: #232a36; --cg-line-strong: #323b4a;
+  --cg-primary: #1bb5d4; --cg-primary-soft: #0d2730; --cg-danger-soft: #2a1118;
 }
 
 html, body { height: 100%; }
-body {
-  background: var(--cg-surface); color: var(--cg-ink);
-  font-family: var(--cg-font-sans); -webkit-font-smoothing: antialiased;
-}
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+body { background: var(--cg-surface); color: var(--cg-ink); font-family: var(--cg-font-sans); -webkit-font-smoothing: antialiased; }
+::selection { background: color-mix(in srgb, var(--cg-primary) 25%, transparent); }
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }

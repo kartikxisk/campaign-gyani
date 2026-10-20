@@ -81,6 +81,16 @@ export class ReportsService {
     return [header.join(','), ...lines].join('\n');
   }
 
+  async campaignsCsv(): Promise<string> {
+    const campaigns = await this.prisma.campaign.findMany({ orderBy: { createdAt: 'desc' } });
+    const header = ['Name', 'Status', 'Launched', 'Sent', 'Opened', 'Clicked', 'Submitted', 'Reported', 'Success %'];
+    const lines = await Promise.all(campaigns.map(async (c) => {
+      const k = await this.counts(c.id);
+      return [c.name, c.status, c.launchedAt?.toISOString() ?? '', String(k.sent), String(k.opened), String(k.clicked), String(k.submitted), String(k.reported), String(k.successRate)].map(csvCell).join(',');
+    }));
+    return [header.join(','), ...lines].join('\n');
+  }
+
   async publicReport(code: string): Promise<unknown> {
     const campaign = await this.resolvePublic(code);
     const counts = await this.counts(campaign.id);

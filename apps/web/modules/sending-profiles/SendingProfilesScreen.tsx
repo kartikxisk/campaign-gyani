@@ -6,13 +6,14 @@ import { useListState } from '@/lib/use-list-state';
 import { useList, useSaveItem, useDeleteItem } from '@/lib/resource';
 import { api } from '@/lib/api-client';
 
-interface Profile { id: string; name: string; provider: string; fromAddress: string; host: string; port: number; username: string; rateLimit: number; maxConnections: number; maxMessages: number; pool: boolean; ignoreCertErrors: boolean; }
+interface Profile { id: string; name: string; provider: string; fromAddress: string; host: string; port: number; username: string; rateLimit: number; maxConnections: number; maxMessages: number; pool: boolean; ignoreCertErrors: boolean; headers?: Header[]; }
 type Preset = { host?: string; port: number; rateLimit: number; maxConnections: number; maxMessages: number };
 const PROVIDERS = [
   { value: 'gmail', label: 'Gmail / Google Workspace' }, { value: 'o365', label: 'Microsoft 365 / Outlook' },
   { value: 'ses', label: 'Amazon SES' }, { value: 'sendgrid', label: 'SendGrid' }, { value: 'mailgun', label: 'Mailgun' }, { value: 'custom', label: 'Custom SMTP' },
 ];
-const empty = { name: '', provider: 'custom', fromAddress: '', host: '', port: 587, username: '', password: '', rateLimit: 10, maxConnections: 5, maxMessages: 100, pool: true, ignoreCertErrors: false, headers: [] as unknown[] };
+type Header = { key: string; value: string };
+const empty = { name: '', provider: 'custom', fromAddress: '', host: '', port: 587, username: '', password: '', rateLimit: 10, maxConnections: 5, maxMessages: 100, pool: true, ignoreCertErrors: false, headers: [] as Header[] };
 
 export function SendingProfilesScreen() {
   const ls = useListState();
@@ -64,7 +65,7 @@ export function SendingProfilesScreen() {
         empty={{ title: 'No sending profiles yet', body: 'Add an SMTP profile to send campaign mail.', action: <Button onClick={() => setEditing({ ...empty })}>New profile</Button> }}
         rowActions={(r) => (
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setEditing({ id: r.id, name: r.name, provider: r.provider, fromAddress: r.fromAddress, host: r.host, port: r.port, username: r.username, password: '', rateLimit: r.rateLimit, maxConnections: r.maxConnections, maxMessages: r.maxMessages, pool: r.pool, ignoreCertErrors: r.ignoreCertErrors, headers: [] })}>Edit</Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditing({ id: r.id, name: r.name, provider: r.provider, fromAddress: r.fromAddress, host: r.host, port: r.port, username: r.username, password: '', rateLimit: r.rateLimit, maxConnections: r.maxConnections, maxMessages: r.maxMessages, pool: r.pool, ignoreCertErrors: r.ignoreCertErrors, headers: r.headers ?? [] })}>Edit</Button>
             <Button variant="ghost" size="sm" onClick={() => setToDelete(r)}>Delete</Button>
           </div>
         )} />
@@ -87,6 +88,19 @@ export function SendingProfilesScreen() {
               <Field label="Msgs / conn"><Input type="number" value={editing.maxMessages} onChange={(e) => setEditing({ ...editing, maxMessages: Number(e.target.value) })} /></Field>
             </div>
             <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={editing.pool} onChange={(e) => setEditing({ ...editing, pool: e.target.checked })} /> Reuse connections (pool)</label>
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-ink">Custom headers</span>
+              <div className="space-y-1.5">
+                {editing.headers.map((h, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input placeholder="Header" value={h.key} onChange={(e) => { const hs = [...editing.headers]; hs[i] = { key: e.target.value, value: hs[i]?.value ?? '' }; setEditing({ ...editing, headers: hs }); }} />
+                    <Input placeholder="Value" value={h.value} onChange={(e) => { const hs = [...editing.headers]; hs[i] = { key: hs[i]?.key ?? '', value: e.target.value }; setEditing({ ...editing, headers: hs }); }} />
+                    <button className="shrink-0 px-1 text-muted hover:text-danger" onClick={() => setEditing({ ...editing, headers: editing.headers.filter((_, j) => j !== i) })} aria-label="Remove header">✕</button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="secondary" size="sm" className="mt-2" onClick={() => setEditing({ ...editing, headers: [...editing.headers, { key: '', value: '' }] })}>Add header</Button>
+            </div>
             <div className="rounded-cg border border-line bg-surface/60 p-3">
               <div className="mb-2 text-sm font-medium text-ink">Send a test message</div>
               <div className="flex items-end gap-2">

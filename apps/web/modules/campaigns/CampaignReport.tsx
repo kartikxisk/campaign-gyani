@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile, DataTable, Drawer, Select, ConfirmDialog, useToast, type Column } from '@cg/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
+import { parseUA } from '@/lib/ua';
 
 interface Campaign { id: string; name: string; status: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; }
 interface Counts { sent: number; opened: number; clicked: number; submitted: number; reported: number; successRate: number; }
@@ -111,7 +112,12 @@ export function CampaignReport({ id }: { id: string }) {
             {(eventsByResult.get(openResult.id) ?? []).map((e) => (
               <li key={e.id} className="rounded-cg border border-line p-3">
                 <div className="flex items-center justify-between"><Badge tone={statusTone[e.type] ?? 'neutral'}>{e.type}</Badge><span className="text-xs text-muted">{new Date(e.createdAt).toLocaleString()}</span></div>
-                {(e.ip || e.userAgent) && <div className="mt-1 font-mono text-xs text-muted">{e.ip} · {e.userAgent}</div>}
+                {(e.ip || e.userAgent) && (() => { const ua = parseUA(e.userAgent); return (
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+                    {e.ip && <span className="font-mono">{e.ip}</span>}
+                    {e.userAgent && <span>{ua.browser} · {ua.os}</span>}
+                  </div>
+                ); })()}
                 {e.payload && Object.keys(e.payload).length > 0 && (
                   <dl className="mt-2 grid grid-cols-[100px_1fr] gap-1 text-xs">
                     {Object.entries(e.payload).map(([k, v]) => <><dt key={k} className="text-muted">{k}</dt><dd className="font-mono text-ink">{String(v)}</dd></>)}

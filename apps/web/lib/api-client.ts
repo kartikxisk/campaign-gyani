@@ -20,7 +20,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();
   const headers = new Headers(init.headers);
   if (MUTATING.has(method)) {
-    if (!csrfToken) await fetchCsrf();
+    // The CSRF token requires a session; before login there is none, and login
+    // is CSRF-exempt — so a failed pre-flight must not block the request.
+    if (!csrfToken) { try { await fetchCsrf(); } catch { /* not authenticated yet */ } }
     if (csrfToken) headers.set('x-csrf-token', csrfToken);
     if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   }

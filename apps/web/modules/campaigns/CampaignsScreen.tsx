@@ -26,7 +26,12 @@ export function CampaignsScreen() {
   return (
     <div>
       <PageHeader title="Campaigns" subtitle="Every simulation you've run."
-        actions={<Link href="/campaigns/new"><Button>New campaign</Button></Link>} />
+        actions={
+          <div className="flex items-center gap-2">
+            <a href="/api/reports/campaigns.csv"><Button variant="secondary">Export CSV</Button></a>
+            <Link href="/campaigns/new"><Button>New campaign</Button></Link>
+          </div>
+        } />
       <DataTable columns={columns} rows={data?.rows ?? []} rowKey={(r) => r.id} loading={isLoading} sort={ls.sort} onSort={ls.onSort}
         search={{ ...ls.search, placeholder: 'Search campaigns…' }}
         pagination={data ? { page: data.page, limit: data.limit, total: data.total, onPage: ls.setPage } : undefined}

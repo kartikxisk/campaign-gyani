@@ -19,6 +19,15 @@ export class ReportsController {
     return this.reports.counts(id);
   }
 
+  @Get('reports/campaigns.csv')
+  @UseGuards(SessionGuard)
+  async campaignsCsv(@Res() res: Response): Promise<void> {
+    const csv = await this.reports.campaignsCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="campaigns.csv"');
+    res.send(csv);
+  }
+
   @Get('campaigns/:id/export/results.csv')
   @UseGuards(SessionGuard)
   async resultsCsv(@Param('id') id: string, @Res() res: Response): Promise<void> {
