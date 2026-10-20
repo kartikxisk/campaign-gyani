@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
 import { Circuit, CircuitOpenError } from './circuit';
 import { MAILER, type Mailer } from './mailer';
+import { SEND_QUEUE, type SendQueue } from './send-queue.port';
 import { SettingsService } from '../settings/settings.service';
 import { SuppressionService } from '../suppression/suppression.service';
 
@@ -20,6 +21,7 @@ export class SendProcessor {
     private readonly circuit: Circuit,
     private readonly settings: SettingsService,
     private readonly suppression: SuppressionService,
+    @Inject(SEND_QUEUE) private readonly queue: SendQueue,
   ) {}
 
   async deliver(resultId: string, attempt: number, maxAttempts: number): Promise<void> {
@@ -29,6 +31,11 @@ export class SendProcessor {
     });
     if (!result) return;
     if (TERMINAL.has(result.status)) return; // already progressed; don't resend
+    // Paused: keep the send pending by re-queuing it until the campaign resumes.
+    if (result.campaign.status === 'PAUSED') {
+      await this.queue.enqueue([{ resultId, sendAt: Date.now() + 30_000 }]);
+      return;
+    }
     // Don't send for a campaign that is completed, still draft, or deleted.
     if (result.campaign.status !== 'SCHEDULED' && result.campaign.status !== 'RUNNING') return;
     const mode = await this.settings.getMode();

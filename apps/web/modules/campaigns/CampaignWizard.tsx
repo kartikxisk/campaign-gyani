@@ -10,7 +10,7 @@ import { stepsFor, validateStep, toCreatePayload, type WizardData, type StepKey 
 
 const initial: WizardData = { name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '' };
 
-export function CampaignWizard() {
+export function CampaignWizard({ editId, initial: initialProp }: { editId?: string; initial?: Partial<WizardData> } = {}) {
   const router = useRouter();
   const { notify } = useToast();
   const { mode } = useMode();
@@ -18,7 +18,8 @@ export function CampaignWizard() {
   const steps = stepsFor(email);
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [d, setD] = useState<WizardData>(initial);
+  const [d, setD] = useState<WizardData>({ ...initial, ...initialProp });
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
@@ -32,14 +33,28 @@ export function CampaignWizard() {
   const next = () => { const e = validateStep(key, d); if (e) { setError(e); return; } setError(null); setStepIndex((s) => Math.min(s + 1, steps.length - 1)); };
   const back = () => { setError(null); setStepIndex((s) => Math.max(s - 1, 0)); };
 
+  const persist = async (): Promise<string> => {
+    const payload = toCreatePayload(d, email);
+    const res = editId ? await api.put<{ id: string }>(`/campaigns/${editId}`, payload) : await api.post<{ id: string }>('/campaigns', payload);
+    return res.id;
+  };
+
+  const saveDraft = async () => {
+    const e = validateStep('name', d);
+    if (e) { setStepIndex(steps.findIndex((x) => x.key === 'name')); setError(e); return; }
+    setSaving(true);
+    try { const id = await persist(); notify('Draft saved', 'success'); router.push(`/campaigns/${id}`); }
+    catch (e) { notify((e as Error).message, 'error'); setSaving(false); }
+  };
+
   const launch = async () => {
     for (const st of steps) { const e = validateStep(st.key, d); if (e) { setStepIndex(steps.findIndex((x) => x.key === st.key)); setError(e); return; } }
     setLaunching(true);
     try {
-      const created = await api.post<{ id: string }>('/campaigns', toCreatePayload(d, email));
-      await api.post(`/campaigns/${created.id}/launch`);
+      const id = await persist();
+      await api.post(`/campaigns/${id}/launch`);
       notify('Campaign launched', 'success');
-      router.push(`/campaigns/${created.id}`);
+      router.push(`/campaigns/${id}`);
     } catch (e) { notify((e as Error).message, 'error'); setLaunching(false); }
   };
 
@@ -75,7 +90,7 @@ export function CampaignWizard() {
 
   return (
     <div>
-      <PageHeader title="New campaign" subtitle={`${steps.length} quick steps from idea to launch.`} />
+      <PageHeader title={editId ? 'Edit campaign' : 'New campaign'} subtitle={`${steps.length} quick steps from idea to launch.`} />
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <Card>
           <div className="flex gap-1 overflow-x-auto border-b border-line px-4 py-3">
@@ -89,9 +104,12 @@ export function CampaignWizard() {
           <CardBody className="min-h-[320px]">{content[key]}</CardBody>
           <div className="flex items-center justify-between border-t border-line px-5 py-3">
             <Button variant="ghost" onClick={back} disabled={stepIndex === 0}>Back</Button>
-            {stepIndex < steps.length - 1
-              ? <Button onClick={next}>Continue</Button>
-              : <Button onClick={launch} disabled={launching}>{launching ? 'Launching…' : 'Launch campaign'}</Button>}
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={saveDraft} disabled={saving}>{saving ? 'Saving…' : 'Save as draft'}</Button>
+              {stepIndex < steps.length - 1
+                ? <Button onClick={next}>Continue</Button>
+                : <Button onClick={launch} disabled={launching}>{launching ? 'Launching…' : 'Launch campaign'}</Button>}
+            </div>
           </div>
         </Card>
         <aside className="hidden lg:block">

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { CampaignStatus, ResultStatus } from '../enums.js';
 
 describe('enums', () => {
-  it('CampaignStatus has exactly the four lifecycle values', () => {
+  it('CampaignStatus has exactly the lifecycle values', () => {
     expect(Object.values(CampaignStatus).sort()).toEqual(
-      ['COMPLETE', 'DRAFT', 'RUNNING', 'SCHEDULED'].sort(),
+      ['COMPLETE', 'DRAFT', 'PAUSED', 'RUNNING', 'SCHEDULED'].sort(),
     );
   });
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import type { Campaign } from '@prisma/client';
 import { campaignCreateSchema, type CampaignCreateDto } from '@cg/shared';
 import { z } from 'zod';
@@ -37,6 +37,21 @@ export class CampaignsController {
   @Post()
   create(@Body(new ZodBodyPipe(campaignCreateSchema)) dto: CampaignCreateDto): Promise<Campaign> {
     return this.service.create(dto);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body(new ZodBodyPipe(campaignCreateSchema)) dto: CampaignCreateDto): Promise<Campaign> {
+    return this.service.update(id, dto);
+  }
+
+  @Post(':id/pause')
+  pause(@Param('id') id: string): Promise<Campaign> {
+    return this.service.pause(id);
+  }
+
+  @Post(':id/resume')
+  resume(@Param('id') id: string): Promise<Campaign> {
+    return this.service.resume(id);
   }
 
   @Post(':id/launch')

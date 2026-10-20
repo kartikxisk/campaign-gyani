@@ -38,6 +38,7 @@ export function CampaignsScreen() {
         empty={{ title: 'No campaigns yet', body: 'Launch your first simulated phishing campaign.', action: <Link href="/campaigns/new"><Button>New campaign</Button></Link> }}
         rowActions={(r) => (
           <div className="flex justify-end gap-2">
+            {r.status === 'DRAFT' && <Link href={`/campaigns/${r.id}/edit`}><Button variant="ghost" size="sm">Edit</Button></Link>}
             <Link href={`/campaigns/${r.id}`}><Button variant="ghost" size="sm">View</Button></Link>
             <Button variant="ghost" size="sm" onClick={() => setToDelete(r)}>Delete</Button>
           </div>

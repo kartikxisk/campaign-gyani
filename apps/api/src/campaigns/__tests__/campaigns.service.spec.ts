@@ -80,6 +80,25 @@ describe('CampaignsService.launch', () => {
     expect(launched.status).toBe('SCHEDULED');
   });
 
+  it('edits a draft and refuses to edit after launch', async () => {
+    const { tpl, page, smtp, group } = await fixture();
+    const campaign = await service.create({ name: 'C', sendByDate: new Date().toISOString(), templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id] });
+    const updated = await service.update(campaign.id, { name: 'C2', sendByDate: new Date().toISOString(), templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id] });
+    expect(updated.name).toBe('C2');
+    await service.launch(campaign.id);
+    await expect(service.update(campaign.id, { name: 'C3', sendByDate: new Date().toISOString(), templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id] })).rejects.toThrow();
+  });
+
+  it('pauses and resumes a launched campaign', async () => {
+    const { tpl, page, smtp, group } = await fixture();
+    const campaign = await service.create({ name: 'C', sendByDate: new Date(Date.now() - 1000).toISOString(), templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id] });
+    await service.launch(campaign.id);
+    expect((await service.pause(campaign.id)).status).toBe('PAUSED');
+    await expect(service.pause(campaign.id)).rejects.toThrow();
+    expect((await service.resume(campaign.id)).status).toBe('RUNNING');
+    await expect(service.resume(campaign.id)).rejects.toThrow();
+  });
+
   it('toggles a public code on and off', async () => {
     const { tpl, page, smtp, group } = await fixture();
     const campaign = await service.create({

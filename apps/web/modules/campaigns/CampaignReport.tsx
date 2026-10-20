@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile, DataTable, Drawer, Select, ConfirmDialog, Menu, useToast, type Column } from '@cg/ui';
@@ -53,6 +54,9 @@ export function CampaignReport({ id }: { id: string }) {
     if (code) { navigator.clipboard?.writeText(`${window.location.origin}/r/${code}`); notify('Public link copied', 'success'); }
   };
   const complete = async () => { await api.post(`/campaigns/${id}/complete`); notify('Marked complete', 'success'); refetchAll(); };
+  const launch = async () => { try { await api.post(`/campaigns/${id}/launch`); notify('Campaign launched', 'success'); refetchAll(); } catch (e) { notify((e as Error).message, 'error'); } };
+  const pause = async () => { await api.post(`/campaigns/${id}/pause`); notify('Campaign paused', 'success'); refetchAll(); };
+  const resume = async () => { await api.post(`/campaigns/${id}/resume`); notify('Campaign resumed', 'success'); refetchAll(); };
 
   const columns: Column<Result>[] = [
     { key: 'name', header: 'Recipient', render: (r) => <div><div className="font-medium text-ink">{[r.firstName, r.lastName].filter(Boolean).join(' ') || '—'}</div><div className="font-mono text-xs text-muted">{r.email}</div></div> },
@@ -71,7 +75,11 @@ export function CampaignReport({ id }: { id: string }) {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone[cam.status] ?? 'neutral'}>{cam.status}</Badge>
-            {cam.status !== 'COMPLETE' && <Button variant="secondary" size="sm" onClick={complete}>Mark complete</Button>}
+            {cam.status === 'DRAFT' && <><Button size="sm" onClick={launch}>Launch</Button><Link href={`/campaigns/${id}/edit`}><Button variant="secondary" size="sm">Edit</Button></Link></>}
+            {cam.status === 'RUNNING' && <Button variant="secondary" size="sm" onClick={pause}>Pause</Button>}
+            {cam.status === 'SCHEDULED' && <Button variant="secondary" size="sm" onClick={pause}>Pause</Button>}
+            {cam.status === 'PAUSED' && <Button size="sm" onClick={resume}>Resume</Button>}
+            {['RUNNING', 'PAUSED', 'SCHEDULED'].includes(cam.status) && <Button variant="secondary" size="sm" onClick={complete}>Mark complete</Button>}
             {cam.publicEnabled && <Button variant="secondary" size="sm" onClick={copyPublic}>Copy link</Button>}
             <Menu label="Actions" items={[
               cam.publicEnabled

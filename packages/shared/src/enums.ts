@@ -2,6 +2,7 @@ export const CampaignStatus = {
   DRAFT: 'DRAFT',
   SCHEDULED: 'SCHEDULED',
   RUNNING: 'RUNNING',
+  PAUSED: 'PAUSED',
   COMPLETE: 'COMPLETE',
 } as const;
 export type CampaignStatus = (typeof CampaignStatus)[keyof typeof CampaignStatus];

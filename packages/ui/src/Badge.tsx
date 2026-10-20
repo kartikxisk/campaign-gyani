@@ -23,5 +23,5 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; 
 export const statusTone: Record<string, Tone> = {
   SCHEDULED: 'neutral', SENDING: 'neutral', SENT: 'sent', OPENED: 'opened',
   CLICKED: 'clicked', SUBMITTED: 'submitted', REPORTED: 'reported', ERROR: 'danger',
-  DRAFT: 'neutral', RUNNING: 'opened', COMPLETE: 'ok',
+  DRAFT: 'neutral', RUNNING: 'opened', PAUSED: 'warn', COMPLETE: 'ok',
 };

@@ -40,6 +40,51 @@ export class CampaignsService {
     });
   }
 
+  async update(id: string, dto: CampaignCreateDto): Promise<Campaign> {
+    const existing = await this.prisma.campaign.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Campaign not found');
+    if (existing.status !== CampaignStatus.DRAFT) {
+      throw new ConflictException('Only a draft campaign can be edited');
+    }
+    const mode = await this.settings.getMode();
+    if (mode !== 'email' && !dto.pageId) {
+      throw new BadRequestException('A landing page is required for a phishing campaign');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      await tx.campaignTemplate.deleteMany({ where: { campaignId: id } });
+      await tx.campaignGroup.deleteMany({ where: { campaignId: id } });
+      return tx.campaign.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          sendByDate: new Date(dto.sendByDate),
+          landingPageId: dto.pageId ?? null,
+          sendingProfileId: dto.smtpId,
+          shuffleTemplates: dto.shuffleTemplates ?? false,
+          templates: { create: dto.templateIds.map((templateId) => ({ templateId })) },
+          groups: { create: dto.groupIds.map((groupId) => ({ groupId })) },
+        },
+      });
+    });
+  }
+
+  async pause(id: string): Promise<Campaign> {
+    const c = await this.prisma.campaign.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException('Campaign not found');
+    if (c.status !== CampaignStatus.RUNNING && c.status !== CampaignStatus.SCHEDULED) {
+      throw new ConflictException('Only a running or scheduled campaign can be paused');
+    }
+    return this.prisma.campaign.update({ where: { id }, data: { status: CampaignStatus.PAUSED } });
+  }
+
+  async resume(id: string): Promise<Campaign> {
+    const c = await this.prisma.campaign.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException('Campaign not found');
+    if (c.status !== CampaignStatus.PAUSED) throw new ConflictException('Only a paused campaign can be resumed');
+    const status = c.sendByDate.getTime() > Date.now() ? CampaignStatus.SCHEDULED : CampaignStatus.RUNNING;
+    return this.prisma.campaign.update({ where: { id }, data: { status } });
+  }
+
   async list(params: ListParamsInput): Promise<ListResult<Campaign & { counts: Record<string, number> }>> {
     const { where, orderBy, skip, take, page, limit } = parseListQuery(params, {
       searchFields: ['name'],
@@ -59,6 +104,7 @@ export class CampaignsService {
       where: { id },
       include: {
         templates: { include: { template: true } },
+        groups: { select: { groupId: true } },
         landingPage: true,
         sendingProfile: {
           select: {
