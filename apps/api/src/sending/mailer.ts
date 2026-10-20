@@ -10,6 +10,7 @@ export interface OutgoingMessage {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; path: string }[];
 }
 
 export interface Mailer {
@@ -29,7 +30,7 @@ export class NodemailerMailer implements Mailer {
       servername: target.servername,
     });
     try {
-      const info = await transporter.sendMail(message);
+      const info = await transporter.sendMail({ ...message, attachments: message.attachments });
       return { messageId: info.messageId };
     } finally {
       transporter.close();

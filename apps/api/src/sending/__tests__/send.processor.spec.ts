@@ -32,11 +32,17 @@ describe('SendProcessor.deliver', () => {
     await prisma.emailTemplate.deleteMany();
     await prisma.landingPage.deleteMany();
     await prisma.sendingProfile.deleteMany();
+    await prisma.asset.deleteMany();
   });
   afterAll(async () => { await prisma.$disconnect(); });
 
-  async function makeResult() {
-    const tpl = await prisma.emailTemplate.create({ data: { name: 'T', envelopeSender: 'IT <it@b.com>', subject: 'Hi {{.FirstName}}', htmlBody: '<p>Hi {{.FirstName}} <a href="https://bank.test">go</a></p>' } });
+  async function makeResult(withAttachment = false) {
+    let attachments: { assetId: string; filename: string }[] = [];
+    if (withAttachment) {
+      const asset = await prisma.asset.create({ data: { filename: 'abc.pdf', path: '/tmp/abc.pdf', mimetype: 'application/pdf', size: 10, kind: 'attachment' } });
+      attachments = [{ assetId: asset.id, filename: 'invoice.pdf' }];
+    }
+    const tpl = await prisma.emailTemplate.create({ data: { name: 'T', envelopeSender: 'IT <it@b.com>', subject: 'Hi {{.FirstName}}', htmlBody: '<p>Hi {{.FirstName}} <a href="https://bank.test">go</a></p>', attachments } });
     const smtp = await prisma.sendingProfile.create({ data: { name: 'P', provider: 'custom', fromAddress: 'it@b.com', host: 'smtp.sender.test', port: 587, username: 'u', passwordEnc: 'e' } });
     const page = await prisma.landingPage.create({ data: { name: 'L', html: '<form></form>', redirectUrl: 'https://x.com' } });
     const campaign = await prisma.campaign.create({ data: { name: 'C', status: 'RUNNING', sendByDate: new Date(), sendingProfileId: smtp.id, landingPageId: page.id, templates: { create: [{ templateId: tpl.id }] } } });
@@ -72,6 +78,14 @@ describe('SendProcessor.deliver', () => {
     await expect(proc.deliver(result.id, 1, 3)).rejects.toThrow();
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
     expect(after.status).not.toBe('ERROR');
+  });
+
+  it('includes the template attachments in the sent message', async () => {
+    const mailer = new FakeMailer('ok');
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit());
+    const { result } = await makeResult(true);
+    await proc.deliver(result.id, 1, 3);
+    expect(mailer.sent[0]?.attachments).toEqual([{ filename: 'invoice.pdf', path: '/tmp/abc.pdf' }]);
   });
 
   it('does not send for a completed campaign', async () => {

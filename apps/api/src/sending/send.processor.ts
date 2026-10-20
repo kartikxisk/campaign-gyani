@@ -50,10 +50,11 @@ export class SendProcessor {
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position, ExternalURL: template.externalUrl ?? '' };
     const html = this.render.renderForRecipient(template.htmlBody, ctx, result.rid);
     const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(result.rid) });
+    const attachments = await this.resolveAttachments(template.attachments);
 
     let info: { messageId: string };
     try {
-      info = await this.mailer.send(profile, { from: template.envelopeSender, to: result.email, subject, html });
+      info = await this.mailer.send(profile, { from: template.envelopeSender, to: result.email, subject, html, attachments });
     } catch (err) {
       this.circuit.recordFailure(profile.host);
       const reason = (err as Error).message;
@@ -75,6 +76,20 @@ export class SendProcessor {
     } catch (dbErr) {
       this.logger.error(`Message sent for ${resultId} but recording SENT failed: ${(dbErr as Error).message}`);
     }
+  }
+
+  private async resolveAttachments(raw: unknown): Promise<{ filename: string; path: string }[]> {
+    const list = Array.isArray(raw) ? (raw as { assetId?: string; filename?: string }[]) : [];
+    const refs = list.filter((a) => a.assetId);
+    if (refs.length === 0) return [];
+    const assets = await this.prisma.asset.findMany({ where: { id: { in: refs.map((r) => r.assetId as string) } } });
+    const byId = new Map(assets.map((a) => [a.id, a]));
+    return refs
+      .map((r) => {
+        const asset = byId.get(r.assetId as string);
+        return asset ? { filename: r.filename ?? asset.filename, path: asset.path } : null;
+      })
+      .filter((x): x is { filename: string; path: string } => x !== null);
   }
 
   private async fail(resultId: string, reason: string, attempt: number, maxAttempts: number): Promise<void> {
