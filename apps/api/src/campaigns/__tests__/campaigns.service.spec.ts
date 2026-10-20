@@ -13,7 +13,7 @@ class FakeQueue implements SendQueue {
 describe('CampaignsService.launch', () => {
   const prisma = new PrismaService();
   const queue = new FakeQueue();
-  const service = new CampaignsService(prisma, queue);
+  const service = new CampaignsService(prisma, queue, { getMode: async () => 'phishing' } as any);
 
   beforeAll(async () => { await prisma.$connect(); });
   afterEach(async () => {

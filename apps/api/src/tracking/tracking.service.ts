@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ResultStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
+import { SettingsService } from '../settings/settings.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
 
@@ -19,6 +20,7 @@ export class TrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly render: RenderService,
+    private readonly settings: SettingsService,
     @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL'>,
   ) {}
 
@@ -36,15 +38,23 @@ export class TrackingService {
     await this.bump(result.id, result.status, ResultStatus.OPENED);
   }
 
-  async recordClick(rid: string, meta: ClientMeta): Promise<string> {
+  async recordClick(rid: string, meta: ClientMeta, originalUrl?: string): Promise<string> {
     const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
     if (!result) throw new NotFoundException();
     await this.prisma.campaignEvent.create({ data: { resultId: result.id, type: 'CLICKED', ip: meta.ip, userAgent: meta.userAgent } });
     await this.bump(result.id, result.status, ResultStatus.CLICKED);
+    // Email mode has no landing page: send the recipient to the real URL the
+    // author linked. Phishing mode routes to the hosted landing page.
+    const mode = await this.settings.getMode();
+    if (mode === 'email') {
+      if (originalUrl && /^https?:\/\//i.test(originalUrl)) return originalUrl;
+      return this.env.PUBLIC_BASE_URL;
+    }
     return `${this.env.PUBLIC_BASE_URL}/v/${rid}`;
   }
 
   async getLandingView(rid: string): Promise<{ html: string }> {
+    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
     const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { include: { landingPage: true } } } });
     if (!result || !result.campaign.landingPage) throw new NotFoundException();
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position };
@@ -59,6 +69,7 @@ export class TrackingService {
   }
 
   async recordSubmit(rid: string, body: Record<string, unknown>, meta: ClientMeta): Promise<string> {
+    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
     const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { include: { landingPage: true } } } });
     if (!result || !result.campaign.landingPage) throw new NotFoundException();
     const lp = result.campaign.landingPage;
@@ -81,6 +92,7 @@ export class TrackingService {
   }
 
   async recordReport(rid: string, meta: ClientMeta): Promise<void> {
+    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
     const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
     if (!result) throw new NotFoundException();
     await this.prisma.campaignEvent.create({ data: { resultId: result.id, type: 'REPORTED', ip: meta.ip, userAgent: meta.userAgent } });

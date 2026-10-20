@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { SendingModule } from '../sending/sending.module';
+import { SettingsModule } from '../settings/settings.module';
 import { CampaignsService } from './campaigns.service';
 import { CampaignsController } from './campaigns.controller';
 
 @Module({
-  imports: [AuthModule, SendingModule],
+  imports: [AuthModule, SendingModule, SettingsModule],
   providers: [CampaignsService],
   controllers: [CampaignsController],
   exports: [CampaignsService],

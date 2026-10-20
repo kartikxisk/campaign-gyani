@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { TrackingService, type ClientMeta } from './tracking.service';
 
@@ -22,8 +22,8 @@ export class TrackingController {
   }
 
   @Get('c/:rid')
-  async click(@Param('rid') rid: string, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const target = await this.tracking.recordClick(rid, meta(req));
+  async click(@Param('rid') rid: string, @Query('u') u: string | undefined, @Req() req: Request, @Res() res: Response): Promise<void> {
+    const target = await this.tracking.recordClick(rid, meta(req), u);
     res.redirect(302, target);
   }
 

@@ -194,6 +194,14 @@ model CampaignEvent {
   @@map("campaign_event")
 }
 
+model AppSetting {
+  id    String  @id @default("app")
+  mode  String?
+  setAt DateTime?
+
+  @@map("app_setting")
+}
+
 model Asset {
   id        String   @id @default(cuid())
   filename  String

@@ -73,7 +73,7 @@ export const campaignCreateSchema = z
     name: nonEmpty('Name'),
     sendByDate: z.string().datetime(),
     templateIds: z.array(z.string()).min(1, 'Select at least one template'),
-    pageId: nonEmpty('Landing page'),
+    pageId: z.string().optional(),
     smtpId: nonEmpty('Sending profile'),
     groupIds: z.array(z.string()).min(1, 'Select at least one group'),
     shuffleTemplates: z.boolean().optional(),

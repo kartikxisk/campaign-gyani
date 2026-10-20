@@ -15,6 +15,7 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { ReportsModule } from './reports/reports.module';
 import { ImportModule } from './import/import.module';
+import { SettingsModule } from './settings/settings.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -33,6 +34,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     TrackingModule,
     ReportsModule,
     ImportModule,
+    SettingsModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [

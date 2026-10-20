@@ -1,10 +1,11 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { CampaignStatus, ResultStatus, type Campaign } from '@prisma/client';
 import type { CampaignCreateDto } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
 import { SEND_QUEUE, type SendQueue } from '../sending/send-queue.port';
+import { SettingsService } from '../settings/settings.service';
 
 function token(bytes = 24): string {
   return randomBytes(bytes).toString('base64url');
@@ -15,14 +16,19 @@ export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(SEND_QUEUE) private readonly queue: SendQueue,
+    private readonly settings: SettingsService,
   ) {}
 
   async create(dto: CampaignCreateDto): Promise<Campaign> {
+    const mode = await this.settings.getMode();
+    if (mode !== 'email' && !dto.pageId) {
+      throw new BadRequestException('A landing page is required for a phishing campaign');
+    }
     return this.prisma.campaign.create({
       data: {
         name: dto.name,
         sendByDate: new Date(dto.sendByDate),
-        landingPageId: dto.pageId,
+        landingPageId: dto.pageId ?? null,
         sendingProfileId: dto.smtpId,
         shuffleTemplates: dto.shuffleTemplates ?? false,
         status: CampaignStatus.DRAFT,
