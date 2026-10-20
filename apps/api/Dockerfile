@@ -26,4 +26,4 @@ COPY --from=build /repo/apps/api/package.json /repo/apps/api/
 COPY --from=build /repo/apps/api/prisma /repo/apps/api/prisma
 WORKDIR /repo/apps/api
 EXPOSE 8080
-CMD ["sh", "-c", "node ../../node_modules/prisma/build/index.js migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "/repo/node_modules/.bin/prisma migrate deploy --schema=/repo/apps/api/prisma/schema.prisma && node dist/main.js"]

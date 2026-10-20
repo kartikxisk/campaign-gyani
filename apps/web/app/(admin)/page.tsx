@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-2">
-              <CardHeader title={email ? 'Click-rate trend' : 'Success trend'} subtitle="Recent campaigns, oldest to newest" />
+              <CardHeader title={email ? 'Engagement trend' : 'Success trend'} subtitle="Recent campaigns, oldest to newest" />
               <CardBody>
                 {data.series.length === 0 ? <EmptyState title="No launched campaigns yet" body="Launch a campaign to see the trend." /> : <Trend points={data.series.map((s) => ({ label: s.name, value: s.successRate }))} />}
               </CardBody>
@@ -92,7 +92,7 @@ export default function DashboardPage() {
                           <td className="px-5 py-3"><Link href={`/campaigns/${c.id}`} className="font-medium text-primary hover:underline">{c.name}</Link></td>
                           <td className="px-2 py-3"><Badge tone={statusTone[c.status] ?? 'neutral'}>{c.status}</Badge></td>
                           <td className="px-2 py-3 text-right font-mono tabular-nums text-muted">{c.counts?.SENT ?? 0} sent</td>
-                          <td className="px-5 py-3 text-right font-mono tabular-nums text-clicked">{c.counts?.CLICKED ?? 0} {email ? 'clicked' : 'clicked'}</td>
+                          <td className="px-5 py-3 text-right font-mono tabular-nums text-clicked">{c.counts?.CLICKED ?? 0} clicked</td>
                         </tr>
                       ))}
                     </tbody>

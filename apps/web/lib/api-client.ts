@@ -33,6 +33,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (csrfToken) headers.set('x-csrf-token', csrfToken);
     res = await fetch(`/api${path}`, { ...init, method, headers, credentials: 'include' });
   }
+  // Session expired mid-use: bounce to login (except for the auth endpoints,
+  // which handle their own 401s — login errors, the /me probe).
+  if (res.status === 401 && !path.startsWith('/auth/') && typeof window !== 'undefined') {
+    csrfToken = null;
+    window.location.href = '/login';
+  }
   if (!res.ok) {
     let body: unknown;
     try { body = await res.json(); } catch { body = undefined; }
