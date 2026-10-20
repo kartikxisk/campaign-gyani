@@ -55,3 +55,27 @@ describe('groups + targets (e2e)', () => {
     await agent.delete(`/api/groups/${g2.id}`).set('x-csrf-token', csrf);
   });
 });
+
+describe('csv import (e2e)', () => {
+  let app: INestApplication;
+  beforeAll(async () => { app = await createTestApp(); });
+  afterAll(async () => { await app?.close(); });
+
+  it('imports valid rows and reports skipped ones', async () => {
+    const agent: TestAgent = request.agent(app.getHttpServer());
+    await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+    const csrf = (await agent.get('/api/auth/csrf')).body.csrfToken as string;
+    const g = (await agent.post('/api/groups').set('x-csrf-token', csrf).send({ name: 'Imported' })).body;
+
+    const csv = 'firstName,lastName,email,position\nA,B,a@corp.com,Dev\nC,D,,QA\nE,F,a@corp.com,Ops\n';
+    const res = await agent
+      .post(`/api/groups/${g.id}/targets/csv`)
+      .set('x-csrf-token', csrf)
+      .attach('file', Buffer.from(csv), { filename: 'targets.csv', contentType: 'text/csv' });
+    expect(res.status).toBe(201);
+    expect(res.body.inserted).toBe(1);
+    expect(res.body.skipped).toHaveLength(2);
+
+    await agent.delete(`/api/groups/${g.id}`).set('x-csrf-token', csrf);
+  });
+});
