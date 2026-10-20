@@ -13,10 +13,18 @@ export function isPublicUnicast(ip: string): boolean {
   } catch {
     return false;
   }
-  // Unwrap IPv4-mapped / IPv4-compatible IPv6 to judge the real target.
+  // Unwrap IPv4-mapped (::ffff:0:0/96) AND IPv4-compatible (::/96) IPv6 so an
+  // embedded private IPv4 target can't masquerade as a "unicast" IPv6 address.
   if (addr.kind() === 'ipv6') {
     const v6 = addr as ipaddr.IPv6;
-    if (v6.isIPv4MappedAddress()) addr = v6.toIPv4Address();
+    const bytes = v6.toByteArray();
+    const first12Zero = bytes.slice(0, 12).every((b) => b === 0);
+    if (v6.isIPv4MappedAddress()) {
+      addr = v6.toIPv4Address();
+    } else if (first12Zero) {
+      // ::/96 (includes ::, ::1, ::x.x.x.x) — judge the embedded IPv4.
+      addr = ipaddr.fromByteArray(bytes.slice(12));
+    }
   }
   return addr.range() === 'unicast';
 }

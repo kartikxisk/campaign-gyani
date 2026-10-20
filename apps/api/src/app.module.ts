@@ -9,6 +9,7 @@ import { AssetsModule } from './assets/assets.module';
 import { SendingProfilesModule } from './sending-profiles/sending-profiles.module';
 import { TemplatesModule } from './templates/templates.module';
 import { LandingPagesModule } from './landing-pages/landing-pages.module';
+import { GroupsModule } from './groups/groups.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -21,6 +22,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     SendingProfilesModule,
     TemplatesModule,
     LandingPagesModule,
+    GroupsModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
   providers: [
