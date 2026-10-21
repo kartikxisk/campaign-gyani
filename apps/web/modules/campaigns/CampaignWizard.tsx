@@ -5,17 +5,13 @@ import { Button, Card, CardBody, Combobox, Field, Input, MultiSelect, Select, us
 import { PageHeader } from '@/components/shell/PageHeader';
 import { useAllOptions } from '@/lib/resource';
 import { api } from '@/lib/api-client';
-import { useMode } from '@/lib/mode';
 import { stepsFor, validateStep, toCreatePayload, type WizardData, type StepKey } from './wizard-validate';
 
-const initial: WizardData = { name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '', repeat: 'NONE' };
+const initial: WizardData = { type: 'phishing', name: '', groupIds: [], templateIds: [], shuffleTemplates: null, pageId: '', smtpId: '', sendByDate: '', repeat: 'NONE' };
 
 export function CampaignWizard({ editId, initial: initialProp }: { editId?: string; initial?: Partial<WizardData> } = {}) {
   const router = useRouter();
   const { notify } = useToast();
-  const { mode } = useMode();
-  const email = mode === 'email';
-  const steps = stepsFor(email);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [d, setD] = useState<WizardData>({ ...initial, ...initialProp });
@@ -23,7 +19,9 @@ export function CampaignWizard({ editId, initial: initialProp }: { editId?: stri
   const [error, setError] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
-  const key = steps[stepIndex]!.key;
+  const email = d.type === 'email';
+  const steps = stepsFor(email);
+  const key = steps[Math.min(stepIndex, steps.length - 1)]!.key;
   const groups = useAllOptions<{ id: string; name: string }>('groups', (g) => g.name);
   const templates = useAllOptions<{ id: string; name: string }>('templates', (t) => t.name);
   const pages = useAllOptions<{ id: string; name: string }>('landing-pages', (p) => p.name);
@@ -34,7 +32,7 @@ export function CampaignWizard({ editId, initial: initialProp }: { editId?: stri
   const back = () => { setError(null); setStepIndex((s) => Math.max(s - 1, 0)); };
 
   const persist = async (): Promise<string> => {
-    const payload = toCreatePayload(d, email);
+    const payload = toCreatePayload(d);
     const res = editId ? await api.put<{ id: string }>(`/campaigns/${editId}`, payload) : await api.post<{ id: string }>('/campaigns', payload);
     return res.id;
   };
@@ -59,6 +57,23 @@ export function CampaignWizard({ editId, initial: initialProp }: { editId?: stri
   };
 
   const content: Record<StepKey, React.ReactNode> = {
+    type: (
+      <div className="space-y-3">
+        <div className="text-sm text-ink-soft">What kind of campaign is this?</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            { v: 'phishing', title: 'Phishing simulation', body: 'Awareness test with a landing page that captures clicks and submissions.' },
+            { v: 'email', title: 'Email campaign', body: 'Real email; links go to your URLs. Tracks opens and clicks only.' },
+          ] as const).map((o) => (
+            <button key={o.v} type="button" onClick={() => setD({ ...d, type: o.v })}
+              className={cn('rounded-cg border p-4 text-left transition-colors', d.type === o.v ? 'border-primary bg-primary-soft' : 'border-line hover:border-line-strong')}>
+              <div className="font-display font-semibold text-ink">{o.title}</div>
+              <div className="mt-1 text-sm text-muted">{o.body}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    ),
     name: <Field label="Campaign name" error={error ?? undefined}><Input autoFocus value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} placeholder={email ? 'October product update' : 'Q4 credential-harvest drill'} /></Field>,
     audience: <Field label="Target groups" error={error ?? undefined} hint="Who receives this email."><MultiSelect options={groups} value={d.groupIds} onChange={(v) => setD({ ...d, groupIds: v })} /></Field>,
     email: (

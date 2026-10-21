@@ -6,7 +6,7 @@ import { api } from '@/lib/api-client';
 import type { WizardData } from '@/modules/campaigns/wizard-validate';
 
 interface CampaignDetail {
-  id: string; name: string; status: string; sendByDate: string; shuffleTemplates: boolean; repeat: string | null;
+  id: string; name: string; status: string; type: string; sendByDate: string; shuffleTemplates: boolean; repeat: string | null;
   landingPageId: string | null; sendingProfileId: string | null;
   templates: { templateId: string }[]; groups: { groupId: string }[];
 }
@@ -23,6 +23,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   if (!data) return <div className="text-sm text-muted">Loading…</div>;
   if (data.status !== 'DRAFT') return <div className="text-sm text-muted">Only draft campaigns can be edited.</div>;
   const initial: Partial<WizardData> = {
+    type: (data.type as WizardData['type']) ?? 'phishing',
     name: data.name,
     groupIds: data.groups.map((g) => g.groupId),
     templateIds: data.templates.map((t) => t.templateId),

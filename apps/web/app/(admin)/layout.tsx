@@ -4,19 +4,16 @@ import { useEffect } from 'react';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
 import { useMe } from '@/lib/auth';
-import { useMode } from '@/lib/mode';
-import { ModeSelect } from '@/modules/onboarding/ModeSelect';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: me, isLoading } = useMe();
-  const { mode, isLoading: modeLoading } = useMode();
 
   useEffect(() => {
     if (!isLoading && me === null) router.replace('/login');
   }, [isLoading, me, router]);
 
-  if (isLoading || !me || modeLoading) {
+  if (isLoading || !me) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-deck text-sm text-deck-muted">
         <span className="animate-pulse">Loading console…</span>
@@ -24,7 +21,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (mode === null) return <ModeSelect />;
 
   return (
     <div className="flex min-h-screen bg-deck">

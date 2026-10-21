@@ -14,4 +14,7 @@ export const NAV_GROUPS: { heading: string; items: { href: string; label: string
     { href: '/groups', label: 'Target groups', icon: 'groups' },
     { href: '/suppressions', label: 'Suppressions', icon: 'suppression' },
   ] },
+  { heading: 'Workspace', items: [
+    { href: '/settings', label: 'Settings', icon: 'settings' },
+  ] },
 ];

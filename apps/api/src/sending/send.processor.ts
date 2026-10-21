@@ -5,6 +5,7 @@ import { RenderService } from '../render/render.service';
 import { Circuit, CircuitOpenError } from './circuit';
 import { MAILER, type Mailer } from './mailer';
 import { SEND_QUEUE, type SendQueue } from './send-queue.port';
+import { ConfigStoreService } from '../config-store/config.service';
 import { SuppressionService } from '../suppression/suppression.service';
 
 const TERMINAL = new Set<string>([ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED, ResultStatus.REPORTED]);
@@ -20,6 +21,7 @@ export class SendProcessor {
     private readonly circuit: Circuit,
     private readonly suppression: SuppressionService,
     @Inject(SEND_QUEUE) private readonly queue: SendQueue,
+    private readonly config: ConfigStoreService,
   ) {}
 
   async deliver(resultId: string, attempt: number, maxAttempts: number): Promise<void> {
@@ -74,6 +76,8 @@ export class SendProcessor {
       const url = this.render.unsubscribeUrl(result.rid);
       html += `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e7ee;font:12px system-ui,sans-serif;color:#7a8798">Don't want these emails? <a href="${url}" style="color:#0891b2">Unsubscribe</a>.</div>`;
     }
+    const cfg = await this.config.get();
+    if (cfg.emailFooter) html += `<div style="margin-top:16px;font:12px system-ui,sans-serif;color:#7a8798">${cfg.emailFooter}</div>`;
     const attachments = await this.resolveAttachments(template.attachments);
 
     let info: { messageId: string };

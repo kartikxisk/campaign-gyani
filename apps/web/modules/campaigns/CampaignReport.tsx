@@ -7,10 +7,9 @@ import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { parseUA } from '@/lib/ua';
-import { useMode } from '@/lib/mode';
 import { openRate, clickRate } from '@cg/shared';
 
-interface Campaign { id: string; name: string; status: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; repeat?: string | null; nextRunAt?: string | null; }
+interface Campaign { id: string; name: string; status: string; type?: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; repeat?: string | null; nextRunAt?: string | null; }
 interface Counts { sent: number; opened: number; clicked: number; submitted: number; reported: number; successRate: number; }
 interface Result { id: string; email: string; firstName: string; lastName: string; position: string; status: string; reported: boolean; error?: string | null; }
 interface Event { id: string; resultId: string; type: string; ip?: string; userAgent?: string; createdAt: string; payload?: Record<string, unknown>; }
@@ -22,12 +21,11 @@ export function CampaignReport({ id }: { id: string }) {
   const qc = useQueryClient();
   const { notify } = useToast();
   const download = (path: string) => { const a = document.createElement('a'); a.href = path; a.click(); };
-  const { mode } = useMode();
-  const email = mode === 'email';
   const campaign = useQuery<Campaign>({ queryKey: ['campaigns', 'item', id], queryFn: () => api.get<Campaign>(`/campaigns/${id}`) });
   const counts = useQuery<Counts>({ queryKey: ['campaigns', id, 'counts'], queryFn: () => api.get<Counts>(`/campaigns/${id}/report`), refetchInterval: 15000 });
   const results = useQuery<Result[]>({ queryKey: ['campaigns', id, 'results'], queryFn: () => api.get<Result[]>(`/campaigns/${id}/results`), refetchInterval: 15000 });
   const timeline = useQuery<Event[]>({ queryKey: ['campaigns', id, 'timeline'], queryFn: () => api.get<Event[]>(`/campaigns/${id}/timeline`), refetchInterval: 15000 });
+  const email = campaign.data?.type === 'email';
 
   const [filter, setFilter] = useState('');
   const [openResult, setOpenResult] = useState<Result | null>(null);

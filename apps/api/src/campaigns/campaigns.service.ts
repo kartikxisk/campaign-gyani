@@ -46,7 +46,7 @@ export class CampaignsService {
     if (existing.status !== CampaignStatus.DRAFT) {
       throw new ConflictException('Only a draft campaign can be edited');
     }
-    const type = dto.type ?? 'phishing';
+    const type = dto.type ?? existing.type;
     if (type !== 'email' && !dto.pageId) {
       throw new BadRequestException('A landing page is required for a phishing campaign');
     }

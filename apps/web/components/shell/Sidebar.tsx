@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@cg/ui';
 import { Icon } from './icons';
 import { NAV_GROUPS } from './nav';
-import { useMode } from '@/lib/mode';
+import { useConfig } from '@/lib/config';
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -12,8 +12,7 @@ function isActive(pathname: string, href: string): boolean {
 
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { mode } = useMode();
-  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !(mode === 'email' && i.href === '/landing-pages') && !(mode !== 'email' && i.href === '/suppressions')) })).filter((g) => g.items.length > 0);
+  const groups = NAV_GROUPS;
   return (
     <nav className="flex-1 space-y-6 px-3 py-4">
       {groups.map((group) => (
@@ -41,10 +40,13 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Brand() {
+  const { brandName, logoUrl } = useConfig();
   return (
     <Link href="/" className="flex items-center gap-2.5 px-5 py-4">
-      <span className="flex h-8 w-8 items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">cg</span>
-      <span className="font-display font-semibold text-deck-ink">Campaign-Gyani</span>
+      {logoUrl
+        ? <img src={logoUrl} alt="" className="h-8 w-8 rounded-cg-sm object-contain" />
+        : <span className="flex h-8 w-8 items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">{brandName.slice(0, 2).toLowerCase()}</span>}
+      <span className="font-display font-semibold text-deck-ink">{brandName}</span>
     </Link>
   );
 }

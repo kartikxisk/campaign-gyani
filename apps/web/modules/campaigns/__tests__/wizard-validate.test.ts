@@ -1,13 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { validateStep, toCreatePayload, stepsFor, type WizardData } from '../wizard-validate';
 
-const base: WizardData = { name: 'Q4', groupIds: ['g1'], templateIds: ['t1'], shuffleTemplates: null, pageId: 'p1', smtpId: 's1', sendByDate: '2026-11-01T10:00' };
+const base: WizardData = { type: 'phishing', name: 'Q4', groupIds: ['g1'], templateIds: ['t1'], shuffleTemplates: null, pageId: 'p1', smtpId: 's1', sendByDate: '2026-11-01T10:00' };
 
 describe('stepsFor', () => {
   it('drops the landing step in email mode', () => {
     expect(stepsFor(false).map((s) => s.key)).toContain('landing');
     expect(stepsFor(true).map((s) => s.key)).not.toContain('landing');
-    expect(stepsFor(true)).toHaveLength(6);
+    expect(stepsFor(false)[0]!.key).toBe('type');
+    expect(stepsFor(true)).toHaveLength(7);
   });
 });
 
@@ -32,11 +33,11 @@ describe('validateStep', () => {
 
 describe('toCreatePayload', () => {
   it('omits pageId in email mode, includes it in phishing mode', () => {
-    expect(toCreatePayload(base, true).pageId).toBeUndefined();
-    expect(toCreatePayload(base, false).pageId).toBe('p1');
+    expect(toCreatePayload({ ...base, type: 'email' }).pageId).toBeUndefined();
+    expect(toCreatePayload({ ...base, type: 'phishing' }).pageId).toBe('p1');
   });
   it('sets shuffle only for multiple templates', () => {
-    expect(toCreatePayload(base, false).shuffleTemplates).toBeUndefined();
-    expect(toCreatePayload({ ...base, templateIds: ['a', 'b'], shuffleTemplates: true }, false).shuffleTemplates).toBe(true);
+    expect(toCreatePayload(base).shuffleTemplates).toBeUndefined();
+    expect(toCreatePayload({ ...base, templateIds: ['a', 'b'], shuffleTemplates: true }).shuffleTemplates).toBe(true);
   });
 });

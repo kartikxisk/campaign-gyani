@@ -1,11 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { openRate, clickRate } from '@cg/shared';
 import { Button, Card, CardBody, CardHeader, Funnel, StatTile, Trend, EmptyState, Badge, statusTone } from '@cg/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
-import { useMode } from '@/lib/mode';
 import { useCountUp } from '@/lib/use-count-up';
 
 interface Dashboard {
@@ -17,8 +15,6 @@ interface Dashboard {
 interface Campaign { id: string; name: string; status: string; counts: Record<string, number>; }
 
 export default function DashboardPage() {
-  const { mode } = useMode();
-  const email = mode === 'email';
   const { data, isLoading } = useQuery<Dashboard>({ queryKey: ['dashboard'], queryFn: () => api.get<Dashboard>('/reports/dashboard') });
   const recent = useQuery<{ rows: Campaign[] }>({ queryKey: ['campaigns', 'recent'], queryFn: () => api.get<{ rows: Campaign[] }>('/campaigns?limit=5&sort=createdAt&order=desc') });
 
@@ -27,15 +23,13 @@ export default function DashboardPage() {
     { label: 'Sent', value: e?.sent ?? 0, color: 'var(--cg-sent)' },
     { label: 'Opened', value: e?.opened ?? 0, color: 'var(--cg-opened)' },
     { label: 'Clicked', value: e?.clicked ?? 0, color: 'var(--cg-clicked)' },
-    ...(email ? [] : [
-      { label: 'Submitted', value: e?.submitted ?? 0, color: 'var(--cg-submitted)' },
-      { label: 'Reported', value: e?.reported ?? 0, color: 'var(--cg-reported)' },
-    ]),
+    { label: 'Submitted', value: e?.submitted ?? 0, color: 'var(--cg-submitted)' },
+    { label: 'Reported', value: e?.reported ?? 0, color: 'var(--cg-reported)' },
   ];
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle={email ? 'How your campaigns are performing.' : 'How your awareness program is performing.'}
+      <PageHeader title="Dashboard" subtitle="How your campaigns are performing."
         actions={<Link href="/campaigns/new"><Button>New campaign</Button></Link>} />
 
       {isLoading || !data ? (
@@ -45,21 +39,12 @@ export default function DashboardPage() {
           <Card>
             <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center">
               <div className="lg:w-60 lg:shrink-0">
-                {email ? (
-                  <div className="flex gap-8">
-                    <RateBlock label="Open rate" value={openRate(e!.sent, e!.opened)} />
-                    <RateBlock label="Click rate" value={clickRate(e!.sent, e!.clicked)} />
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-sm text-muted">Overall success rate</div>
-                    <SuccessNumber value={data.overallSuccessRate} />
-                    <p className="mt-2 text-sm text-ink-soft">Share of recipients who took the bait, across every campaign.</p>
-                  </>
-                )}
+                <div className="text-sm text-muted">Overall success rate</div>
+                <SuccessNumber value={data.overallSuccessRate} />
+                <p className="mt-2 text-sm text-ink-soft">Share of recipients who took the bait, across every phishing campaign.</p>
               </div>
               <div className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6">
-                <div className="mb-3 font-display text-base font-semibold text-ink">{email ? 'Engagement' : 'Exposure pipeline'}</div>
+                <div className="mb-3 font-display text-base font-semibold text-ink">Exposure pipeline</div>
                 <Funnel steps={steps} />
               </div>
             </div>
@@ -74,7 +59,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-2">
-              <CardHeader title={email ? 'Engagement trend' : 'Success trend'} subtitle="Recent campaigns, oldest to newest" />
+              <CardHeader title="Success trend" subtitle="Recent campaigns, oldest to newest" />
               <CardBody>
                 {data.series.length === 0 ? <EmptyState title="No launched campaigns yet" body="Launch a campaign to see the trend." /> : <Trend points={data.series.map((s) => ({ label: s.name, value: s.successRate }))} />}
               </CardBody>
@@ -111,12 +96,4 @@ function SuccessNumber({ value }: { value: number }) {
   const n = useCountUp(value);
   return <div className="mt-1 font-display text-6xl font-semibold tabular-nums text-ink">{n}<span className="text-2xl text-muted">%</span></div>;
 }
-function RateBlock({ label, value }: { label: string; value: number }) {
-  const n = useCountUp(value);
-  return (
-    <div>
-      <div className="text-sm text-muted">{label}</div>
-      <div className="mt-1 font-display text-5xl font-semibold tabular-nums text-ink">{n}<span className="text-xl text-muted">%</span></div>
-    </div>
-  );
-}
+

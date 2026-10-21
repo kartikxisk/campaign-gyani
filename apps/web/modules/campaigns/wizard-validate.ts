@@ -1,4 +1,5 @@
 export interface WizardData {
+  type: 'phishing' | 'email';
   name: string;
   groupIds: string[];
   templateIds: string[];
@@ -9,25 +10,26 @@ export interface WizardData {
   repeat: 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
 }
 
-export type StepKey = 'name' | 'audience' | 'email' | 'landing' | 'profile' | 'schedule' | 'review';
+export type StepKey = 'type' | 'name' | 'audience' | 'email' | 'landing' | 'profile' | 'schedule' | 'review';
 
 export interface Step { key: StepKey; label: string; }
 
 const ALL: Record<StepKey, string> = {
-  name: 'Name', audience: 'Audience', email: 'Email', landing: 'Landing page',
+  type: 'Type', name: 'Name', audience: 'Audience', email: 'Email', landing: 'Landing page',
   profile: 'Sending profile', schedule: 'Schedule', review: 'Review',
 };
 
 export function stepsFor(email: boolean): Step[] {
   const keys: StepKey[] = email
-    ? ['name', 'audience', 'email', 'profile', 'schedule', 'review']
-    : ['name', 'audience', 'email', 'landing', 'profile', 'schedule', 'review'];
+    ? ['type', 'name', 'audience', 'email', 'profile', 'schedule', 'review']
+    : ['type', 'name', 'audience', 'email', 'landing', 'profile', 'schedule', 'review'];
   return keys.map((key) => ({ key, label: ALL[key] }));
 }
 
 /** Returns an error string for a step, or null when the step is complete. */
 export function validateStep(key: StepKey, d: WizardData): string | null {
   switch (key) {
+    case 'type': return null;
     case 'name': return d.name.trim() ? null : 'Give the campaign a name.';
     case 'audience': return d.groupIds.length > 0 ? null : 'Select at least one target group.';
     case 'email':
@@ -41,9 +43,11 @@ export function validateStep(key: StepKey, d: WizardData): string | null {
   }
 }
 
-export function toCreatePayload(d: WizardData, email: boolean) {
+export function toCreatePayload(d: WizardData) {
+  const email = d.type === 'email';
   return {
     name: d.name.trim(),
+    type: d.type,
     groupIds: d.groupIds,
     templateIds: d.templateIds,
     shuffleTemplates: d.templateIds.length > 1 ? Boolean(d.shuffleTemplates) : undefined,
