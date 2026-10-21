@@ -15,7 +15,7 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const groups = NAV_GROUPS;
   return (
-    <nav className="flex-1 space-y-6 px-3 py-4">
+    <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
       {groups.map((group) => (
         <div key={group.heading}>
           <div className="px-3 pb-1.5 text-[11px] font-medium text-deck-muted/70">{group.heading}</div>
@@ -42,11 +42,10 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Brand() {
   const { brandName, logoUrl } = useConfig();
+  if (!logoUrl) return <div aria-hidden className="h-16 shrink-0" />;
   return (
-    <Link href="/" className="flex items-center gap-2.5 px-5 py-4">
-      {logoUrl
-        ? <img src={logoUrl} alt="" className="h-8 w-8 rounded-cg-sm object-contain" />
-        : <span className="flex h-8 w-8 items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">{initials(brandName)}</span>}
+    <Link href="/" className="flex shrink-0 items-center gap-2.5 px-5 py-4">
+      <img src={logoUrl} alt="" className="h-8 w-8 rounded-cg-sm object-contain" />
       <span className="font-display font-semibold text-deck-ink">{brandName}</span>
     </Link>
   );
@@ -54,15 +53,10 @@ export function Brand() {
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-deck md:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-deck md:flex">
       <Brand />
       <NavLinks />
       <ProfileCard />
     </aside>
   );
-}
-
-function initials(name: string): string {
-  const parts = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
-  return (parts.length >= 2 ? parts[0]![0]! + parts[1]![0]! : (parts[0] ?? '').slice(0, 2)).toLowerCase();
 }

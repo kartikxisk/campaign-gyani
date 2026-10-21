@@ -23,6 +23,9 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-3 bg-deck px-4 py-3 text-deck-ink md:px-6">
+      {/* Keeps main's rounded top-left corner visible while content scrolls beneath */}
+      <div aria-hidden className="pointer-events-none absolute left-0 top-full hidden h-5 w-5 md:block"
+        style={{ background: 'radial-gradient(circle at 100% 100%, transparent 20px, var(--cg-deck) 20.5px)' }} />
       <Dialog.Root open={navOpen} onOpenChange={setNavOpen}>
         <Dialog.Trigger className="rounded-cg-sm p-1.5 text-deck-muted hover:bg-white/5 hover:text-deck-ink md:hidden" aria-label="Open navigation">
           <Icon.menu />
