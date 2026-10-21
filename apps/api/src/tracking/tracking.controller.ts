@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 import { TrackingService, type ClientMeta } from './tracking.service';
 
 // 1x1 transparent GIF.
@@ -13,6 +14,7 @@ function meta(req: Request): ClientMeta {
 export class TrackingController {
   constructor(private readonly tracking: TrackingService) {}
 
+  @SkipThrottle()
   @Get('o/:rid')
   async open(@Param('rid') rid: string, @Req() req: Request, @Res() res: Response): Promise<void> {
     await this.tracking.recordOpen(rid, meta(req));
@@ -21,12 +23,14 @@ export class TrackingController {
     res.end(PIXEL);
   }
 
+  @SkipThrottle()
   @Get('c/:rid')
   async click(@Param('rid') rid: string, @Query('u') u: string | undefined, @Query('s') s: string | undefined, @Req() req: Request, @Res() res: Response): Promise<void> {
     const target = await this.tracking.recordClick(rid, meta(req), u, s);
     res.redirect(302, target);
   }
 
+  @SkipThrottle()
   @Get('view/:rid')
   view(@Param('rid') rid: string): Promise<{ html: string }> {
     return this.tracking.getLandingView(rid);
@@ -38,12 +42,14 @@ export class TrackingController {
     res.redirect(302, redirect);
   }
 
+  @SkipThrottle()
   @Get('r/:rid')
   async report(@Param('rid') rid: string, @Req() req: Request): Promise<{ ok: true }> {
     await this.tracking.recordReport(rid, meta(req));
     return { ok: true };
   }
 
+  @SkipThrottle()
   @Get('u/:rid')
   async unsubscribe(@Param('rid') rid: string, @Res() res: Response): Promise<void> {
     const email = await this.tracking.recordUnsubscribe(rid);

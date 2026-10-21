@@ -6,6 +6,7 @@ import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
 import { encryptSecret } from '../auth/crypto.util';
 import { buildTransport, type TransportProfile } from '../mail/transport.factory';
+import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
 import { assertSmtpTarget, SmtpTargetError } from '../mail/smtp-guard';
 
 export type SafeProfile = Omit<SendingProfile, 'passwordEnc'> & { hasPassword: boolean };
@@ -57,9 +58,17 @@ export class SendingProfilesService {
     return this.sanitize(row);
   }
 
-  async findAll(): Promise<SafeProfile[]> {
-    const rows = await this.prisma.sendingProfile.findMany({ orderBy: { updatedAt: 'desc' } });
-    return rows.map((r) => this.sanitize(r));
+  async list(params: ListParamsInput): Promise<ListResult<SafeProfile>> {
+    const { where, orderBy, skip, take, page, limit } = parseListQuery(params, {
+      searchFields: ['name'],
+      sortable: ['name', 'createdAt', 'updatedAt'],
+      defaultSort: 'updatedAt',
+    });
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.sendingProfile.findMany({ where, orderBy, skip, take }),
+      this.prisma.sendingProfile.count({ where }),
+    ]);
+    return { rows: rows.map((r) => this.sanitize(r)), total, page, limit };
   }
 
   async findOne(id: string): Promise<SafeProfile> {

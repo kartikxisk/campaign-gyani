@@ -82,12 +82,20 @@ export class TrackingService {
 
     let captured: Record<string, unknown> | undefined;
     if (lp.captureData) {
+      // The submit endpoint is unauthenticated; bound what a forged POST can
+      // persist (field count, key and value length) regardless of body size.
+      const MAX_FIELDS = 50;
+      const MAX_KEY = 256;
+      const MAX_VALUE = 4096;
       captured = {};
       for (const [k, v] of Object.entries(body)) {
         if (k === 'rid') continue;
+        if (Object.keys(captured).length >= MAX_FIELDS) break;
         const looksLikePassword = /pass|pwd|secret/i.test(k);
         if (looksLikePassword && !lp.capturePasswords) continue;
-        captured[k] = v;
+        const key = k.length > MAX_KEY ? k.slice(0, MAX_KEY) : k;
+        const str = typeof v === 'string' ? v : JSON.stringify(v ?? null);
+        captured[key] = str.length > MAX_VALUE ? str.slice(0, MAX_VALUE) : v;
       }
     }
     await this.prisma.campaignEvent.create({

@@ -74,4 +74,22 @@ describe('tracking (e2e, public)', () => {
     expect(timeline.body.some((e: { type: string }) => e.type === 'CLICKED')).toBe(true);
     expect(timeline.body.some((e: { type: string }) => e.type === 'REPORTED')).toBe(true);
   });
+
+  it('rejects an oversized submit body (capture endpoint is unauthenticated)', async () => {
+    const big = 'x'.repeat(70 * 1024);
+    const res = await request(app.getHttpServer()).post(`/api/t/s/${rid}`)
+      .set('content-type', 'application/json').send({ username: big }).redirects(0);
+    expect(res.status).toBe(413);
+  });
+
+  it('bounds the number of captured fields a forged submit can persist', async () => {
+    const body: Record<string, string> = {};
+    for (let i = 0; i < 200; i++) body[`field${i}`] = 'v';
+    const res = await request(app.getHttpServer()).post(`/api/t/s/${rid}`).type('form').send(body).redirects(0);
+    expect(res.status).toBe(302);
+    const timeline = await agent.get(`/api/campaigns/${campaignId}/timeline`);
+    const submits = timeline.body.filter((e: { type: string }) => e.type === 'SUBMITTED');
+    const latest = submits[submits.length - 1];
+    expect(Object.keys(latest.payload).length).toBeLessThanOrEqual(50);
+  });
 });

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -147,7 +147,7 @@ export function CampaignReport({ id }: { id: string }) {
                 ); })()}
                 {e.payload && Object.keys(e.payload).length > 0 && (
                   <dl className="mt-2 grid grid-cols-[100px_1fr] gap-1 text-xs">
-                    {Object.entries(e.payload).map(([k, v]) => <><dt key={k} className="text-muted">{k}</dt><dd className="font-mono text-ink">{String(v)}</dd></>)}
+                    {Object.entries(e.payload).map(([k, v]) => <Fragment key={k}><dt className="text-muted">{k}</dt><dd className="font-mono text-ink">{String(v)}</dd></Fragment>)}
                   </dl>
                 )}
               </li>

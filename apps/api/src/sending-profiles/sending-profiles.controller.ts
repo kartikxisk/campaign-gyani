@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { sendingProfileSchema, type SendingProfileDto } from '@cg/shared';
 import { z } from 'zod';
 import { ZodBodyPipe } from '../common/zod.pipe';
+import type { ListParamsInput, ListResult } from '../common/list-query';
 import { SessionGuard } from '../auth/session.guard';
 import { PROVIDER_PRESETS } from '../mail/transport.factory';
 import { SendingProfilesService, type SafeProfile, type SendTestInput } from './sending-profiles.service';
@@ -29,8 +30,8 @@ export class SendingProfilesController {
   }
 
   @Get()
-  findAll(): Promise<SafeProfile[]> {
-    return this.service.findAll();
+  list(@Query() q: ListParamsInput): Promise<ListResult<SafeProfile>> {
+    return this.service.list(q);
   }
 
   @Get(':id')

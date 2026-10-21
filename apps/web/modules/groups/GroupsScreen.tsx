@@ -80,7 +80,7 @@ function ManageTargets({ group, onClose }: { group: Group; onClose: () => void }
   ];
 
   return (
-    <Drawer open onOpenChange={(o) => !o && onClose()} title={`Manage “${group.name}”`} description={`${targets?.length ?? 0} targets`}>
+    <Drawer open onOpenChange={(o) => !o && onClose()} title={`Manage “${group.name}”`} description={`${targets?.length ?? 0} ${targets?.length === 1 ? 'target' : 'targets'}`}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
           <Input placeholder="Email" value={row.email} onChange={(e) => setRow({ ...row, email: e.target.value })} />

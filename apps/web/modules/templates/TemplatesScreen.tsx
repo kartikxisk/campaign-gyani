@@ -75,7 +75,7 @@ export function TemplatesScreen() {
             <div>
               <span className="mb-1.5 block text-sm font-medium text-ink">Body</span>
               <Tabs tabs={[
-                { value: 'html', label: 'HTML', content: <HtmlEditor value={editing.htmlBody} onChange={(v) => setEditing({ ...editing, htmlBody: v })} /> },
+                { value: 'html', label: 'HTML', content: <HtmlEditor withPreview={false} value={editing.htmlBody} onChange={(v) => setEditing({ ...editing, htmlBody: v })} /> },
                 { value: 'text', label: 'Plain text', content: <Textarea rows={12} value={editing.textBody} onChange={(e) => setEditing({ ...editing, textBody: e.target.value })} placeholder="Plain-text fallback (optional)" /> },
                 { value: 'preview', label: 'Preview', content: <PreviewFrame html={editing.htmlBody} /> },
               ]} />

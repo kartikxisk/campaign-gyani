@@ -52,4 +52,13 @@ describe('templates (e2e)', () => {
     expect(del.status).toBe(200);
     expect((await agent.get(`/api/templates/${id}`)).status).toBe(404);
   });
+
+  it('accepts a large HTML body (inline images push real emails past the 100kb default)', async () => {
+    const { agent, csrf } = await authed(app);
+    const bigHtml = `<p>hi</p>${'<span>x</span>'.repeat(90_000)}`; // ~1.1 MB
+    expect(bigHtml.length).toBeGreaterThan(1_000_000);
+    const res = await agent.post('/api/templates').set('x-csrf-token', csrf).send({ ...tpl, name: 'Big', htmlBody: bigHtml });
+    expect(res.status).toBe(201);
+    await agent.delete(`/api/templates/${res.body.id}`).set('x-csrf-token', csrf);
+  });
 });

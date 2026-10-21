@@ -16,6 +16,11 @@ async function fetchCsrf(): Promise<string> {
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+// Validation errors arrive as zod issues ({ path, message }), not strings.
+type Issue = { path?: string; message?: string };
+const issueText = (i: string | Issue): string =>
+  typeof i === 'string' ? i : i.path ? `${i.path}: ${i.message ?? 'invalid'}` : (i.message ?? 'invalid');
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();
   const headers = new Headers(init.headers);
@@ -45,8 +50,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     let body: unknown;
     try { body = await res.json(); } catch { body = undefined; }
-    const msg = (body as { message?: string | string[] } | undefined)?.message;
-    throw new ApiError(res.status, Array.isArray(msg) ? msg.join(', ') : (msg ?? res.statusText), body);
+    const msg = (body as { message?: string | Array<string | Issue> } | undefined)?.message;
+    throw new ApiError(res.status, Array.isArray(msg) ? msg.map(issueText).join(', ') : (msg ?? res.statusText), body);
   }
   if (res.status === 204) return undefined as T;
   const ct = res.headers.get('content-type') ?? '';

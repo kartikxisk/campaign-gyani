@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "nest start --watch",
+    "dev": "tsc -p tsconfig.json && (tsc -p tsconfig.json --watch --preserveWatchOutput & node --watch dist/main.js)",
     "start": "node dist/main.js",
     "lint": "true",
     "typecheck": "tsc -p tsconfig.json --noEmit",

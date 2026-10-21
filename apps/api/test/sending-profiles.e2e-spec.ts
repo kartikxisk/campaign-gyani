@@ -45,6 +45,15 @@ describe('sending-profiles (e2e)', () => {
     expect(got.body.name).toBe('Primary');
     expect(got.body.passwordEnc).toBeUndefined();
 
+    // The list endpoint returns the paginated envelope the console expects.
+    const list = await agent.get('/api/sending-profiles');
+    expect(Array.isArray(list.body.rows)).toBe(true);
+    expect(typeof list.body.total).toBe('number');
+    expect(list.body).toMatchObject({ page: expect.any(Number), limit: expect.any(Number) });
+    const listed = list.body.rows.find((r: { id: string }) => r.id === id);
+    expect(listed).toBeTruthy();
+    expect(listed.passwordEnc).toBeUndefined();
+
     const upd = await agent.put(`/api/sending-profiles/${id}`).set('x-csrf-token', csrf).send({ ...profile, name: 'Renamed', password: '' });
     expect(upd.body.name).toBe('Renamed');
 
