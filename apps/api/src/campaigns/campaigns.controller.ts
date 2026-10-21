@@ -4,8 +4,7 @@ import { campaignCreateSchema, type CampaignCreateDto } from '@cg/shared';
 import { z } from 'zod';
 import { ZodBodyPipe } from '../common/zod.pipe';
 import { SessionGuard } from '../auth/session.guard';
-import type { ListParamsInput } from '../common/list-query';
-import { CampaignsService, type ResultListParams, type TimelineListParams } from './campaigns.service';
+import { CampaignsService, type CampaignListParams, type ResultListParams, type TimelineListParams } from './campaigns.service';
 
 const visibilitySchema = z.object({ enabled: z.boolean() });
 
@@ -15,7 +14,7 @@ export class CampaignsController {
   constructor(private readonly service: CampaignsService) {}
 
   @Get()
-  list(@Query() q: ListParamsInput) {
+  list(@Query() q: CampaignListParams) {
     return this.service.list(q);
   }
 

@@ -11,6 +11,7 @@ function token(bytes = 24): string {
   return randomBytes(bytes).toString('base64url');
 }
 
+export type CampaignListParams = ListParamsInput & { type?: 'phishing' | 'email' };
 export type ResultListParams = ListParamsInput & { status?: ResultStatus };
 export type TimelineListParams = ListParamsInput & { resultId?: string };
 
@@ -90,15 +91,18 @@ export class CampaignsService {
     return this.prisma.campaign.update({ where: { id }, data: { status } });
   }
 
-  async list(params: ListParamsInput): Promise<ListResult<Campaign & { counts: Record<string, number> }>> {
+  async list(params: CampaignListParams): Promise<ListResult<Campaign & { counts: Record<string, number> }>> {
     const { where, orderBy, skip, take, page, limit } = parseListQuery(params, {
       searchFields: ['name'],
       sortable: ['name', 'createdAt', 'launchedAt', 'sendByDate', 'status'],
       defaultSort: 'createdAt',
     });
+    const scoped = (params.type === 'phishing' || params.type === 'email')
+      ? { ...(where ?? {}), type: params.type }
+      : where;
     const [rows, total] = await this.prisma.$transaction([
-      this.prisma.campaign.findMany({ where, orderBy, skip, take }),
-      this.prisma.campaign.count({ where }),
+      this.prisma.campaign.findMany({ where: scoped, orderBy, skip, take }),
+      this.prisma.campaign.count({ where: scoped }),
     ]);
     const withCounts = await Promise.all(rows.map(async (c) => ({ ...c, counts: await this.counts(c.id) })));
     return { rows: withCounts, total, page, limit };

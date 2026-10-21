@@ -94,6 +94,28 @@ describe('campaigns (e2e)', () => {
     await agent.delete(`/api/campaigns/${id}`).set('x-csrf-token', csrf);
   }, 30_000);
 
+  it('filters the campaign list by type', async () => {
+    const { tpl, page, smtp, group } = await buildDeps();
+    const phish = (await agent.post('/api/campaigns').set('x-csrf-token', csrf).send({
+      name: 'Phish ' + Math.random(), type: 'phishing', sendByDate: new Date().toISOString(),
+      templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id],
+    })).body;
+    const mail = (await agent.post('/api/campaigns').set('x-csrf-token', csrf).send({
+      name: 'Mail ' + Math.random(), type: 'email', sendByDate: new Date().toISOString(),
+      templateIds: [tpl.id], smtpId: smtp.id, groupIds: [group.id],
+    })).body;
+
+    const onlyEmail = await agent.get('/api/campaigns?type=email&limit=200');
+    const types = new Set(onlyEmail.body.rows.map((c: { type: string }) => c.type));
+    expect(types.has('email')).toBe(true);
+    expect(types.has('phishing')).toBe(false);
+    expect(onlyEmail.body.rows.some((c: { id: string }) => c.id === mail.id)).toBe(true);
+    expect(onlyEmail.body.rows.some((c: { id: string }) => c.id === phish.id)).toBe(false);
+
+    await agent.delete(`/api/campaigns/${phish.id}`).set('x-csrf-token', csrf);
+    await agent.delete(`/api/campaigns/${mail.id}`).set('x-csrf-token', csrf);
+  });
+
   it('rejects a multi-template campaign without a shuffle choice', async () => {
     const { tpl, page, smtp, group } = await buildDeps();
     const tpl2 = (await agent.post('/api/templates').set('x-csrf-token', csrf)

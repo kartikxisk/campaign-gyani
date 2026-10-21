@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '500'], variab
 
 export const metadata: Metadata = {
   title: 'Campaign-Gyani',
-  description: 'Security-awareness phishing simulation console',
+  description: 'Phishing simulation and email campaign console',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

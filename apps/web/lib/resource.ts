@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tansta
 import { api } from './api-client';
 
 export interface ListResult<T> { rows: T[]; total: number; page: number; limit: number; }
-export interface ListParams { query?: string; sort?: string; order?: 'asc' | 'desc'; page?: number; limit?: number; }
+export interface ListParams { query?: string; sort?: string; order?: 'asc' | 'desc'; page?: number; limit?: number; filters?: Record<string, string | undefined>; }
 
 function qs(params: ListParams): string {
   const sp = new URLSearchParams();
@@ -12,6 +12,7 @@ function qs(params: ListParams): string {
   if (params.order) sp.set('order', params.order);
   if (params.page) sp.set('page', String(params.page));
   if (params.limit) sp.set('limit', String(params.limit));
+  for (const [k, v] of Object.entries(params.filters ?? {})) if (v) sp.set(k, v);
   const s = sp.toString();
   return s ? `?${s}` : '';
 }
