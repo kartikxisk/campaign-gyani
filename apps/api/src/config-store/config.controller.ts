@@ -7,10 +7,15 @@ import { ConfigStoreService, type AppConfig } from './config.service';
 const configSchema = z.object({
   brandName: z.string().trim().min(1).max(60).optional(),
   logoUrl: z.string().url().nullable().optional().or(z.literal('')),
+  faviconUrl: z.string().url().nullable().optional().or(z.literal('')),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  timezone: z.string().min(1).max(64).optional(),
+  timezone: z.string().min(1).max(64).refine(isTimeZone, 'Unknown IANA timezone').optional(),
   emailFooter: z.string().max(2000).optional(),
 });
+
+function isTimeZone(tz: string): boolean {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch { return false; }
+}
 
 @Controller('config')
 export class ConfigController {
@@ -25,7 +30,9 @@ export class ConfigController {
   @Put()
   @UseGuards(SessionGuard)
   update(@Body(new ZodBodyPipe(configSchema)) dto: Partial<AppConfig>): Promise<AppConfig> {
-    const clean = { ...dto, logoUrl: dto.logoUrl === '' ? null : dto.logoUrl };
+    const clean = { ...dto };
+    if (clean.logoUrl === '') clean.logoUrl = null;
+    if (clean.faviconUrl === '') clean.faviconUrl = null;
     return this.config.update(clean);
   }
 }

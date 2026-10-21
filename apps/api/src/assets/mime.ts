@@ -4,6 +4,8 @@ export const SAFE_IMAGE_MIMES: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/gif': '.gif',
   'image/webp': '.webp',
+  'image/x-icon': '.ico',
+  'image/vnd.microsoft.icon': '.ico',
 };
 
 /** Extensions for common attachment mimetypes; falls back to '.bin'. */

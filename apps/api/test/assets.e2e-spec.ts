@@ -63,6 +63,20 @@ describe('assets (e2e)', () => {
     await agent.delete(`/api/assets/${up.body.id}`).set('x-csrf-token', csrf);
   });
 
+  it('accepts an ICO favicon and serves it inline', async () => {
+    const { agent, csrf } = await authed(app);
+    const up = await agent
+      .post('/api/assets')
+      .set('x-csrf-token', csrf)
+      .field('kind', 'logo')
+      .attach('file', Buffer.from('ico-bytes'), { filename: 'favicon.ico', contentType: 'image/x-icon' });
+    expect(up.status).toBe(201);
+    expect(up.body.filename).toMatch(/\.ico$/);
+    const fetched = await request(app.getHttpServer()).get(new URL(up.body.url).pathname);
+    expect(fetched.headers['content-type']).toContain('image/x-icon');
+    await agent.delete(`/api/assets/${up.body.id}`).set('x-csrf-token', csrf);
+  });
+
   it('uploads a file and serves it back at its URL', async () => {
     const { agent, csrf } = await authed(app);
     const up = await agent
@@ -78,6 +92,8 @@ describe('assets (e2e)', () => {
     const fetched = await request(app.getHttpServer()).get(path);
     expect(fetched.status).toBe(200);
     expect(fetched.body.toString()).toBe('logo-bytes');
+    // The console (another origin in dev) and mail clients must be able to embed it.
+    expect(fetched.headers['cross-origin-resource-policy']).toBe('cross-origin');
 
     const list = await agent.get('/api/assets');
     expect(list.body.some((a: { id: string }) => a.id === up.body.id)).toBe(true);

@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export interface AppConfig {
   brandName: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
   primaryColor: string;
   timezone: string;
   emailFooter: string;
@@ -12,6 +13,7 @@ export interface AppConfig {
 const DEFAULTS: AppConfig = {
   brandName: 'Campaign-Gyani',
   logoUrl: null,
+  faviconUrl: null,
   primaryColor: '#0891b2',
   timezone: 'UTC',
   emailFooter: '',

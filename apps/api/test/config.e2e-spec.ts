@@ -39,6 +39,25 @@ describe('config (e2e)', () => {
     expect(after.body.primaryColor).toBe('#ff3366');
   });
 
+  it('stores and clears a favicon URL', async () => {
+    const pub = await request(app.getHttpServer()).get('/api/config');
+    expect(pub.body.faviconUrl).toBeNull();
+
+    const set = await agent.put('/api/config').set('x-csrf-token', csrf).send({ faviconUrl: 'http://localhost:8080/api/assets/file/x.png' });
+    expect(set.status).toBe(200);
+    expect(set.body.faviconUrl).toBe('http://localhost:8080/api/assets/file/x.png');
+
+    const cleared = await agent.put('/api/config').set('x-csrf-token', csrf).send({ faviconUrl: '' });
+    expect(cleared.body.faviconUrl).toBeNull();
+  });
+
+  it('rejects an unknown timezone', async () => {
+    const bad = await agent.put('/api/config').set('x-csrf-token', csrf).send({ timezone: 'Mars/Olympus' });
+    expect(bad.status).toBe(400);
+    const ok = await agent.put('/api/config').set('x-csrf-token', csrf).send({ timezone: 'Asia/Kolkata' });
+    expect(ok.status).toBe(200);
+  });
+
   it('rejects an invalid color', async () => {
     const res = await agent.put('/api/config').set('x-csrf-token', csrf).send({ primaryColor: 'red' });
     expect(res.status).toBe(400);

@@ -22,5 +22,13 @@ function BrandApplier() {
     if (config.primaryColor) document.documentElement.style.setProperty('--cg-primary', config.primaryColor);
     if (config.brandName) document.title = config.brandName;
   }, [config.primaryColor, config.brandName]);
+  useEffect(() => {
+    const existing = document.head.querySelector<HTMLLinkElement>('link[data-cg-favicon]');
+    if (!config.faviconUrl) { existing?.remove(); return; }
+    const link = existing ?? Object.assign(document.createElement('link'), { rel: 'icon' });
+    link.setAttribute('data-cg-favicon', '');
+    link.href = config.faviconUrl;
+    if (!existing) document.head.appendChild(link);
+  }, [config.faviconUrl]);
   return null;
 }

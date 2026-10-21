@@ -38,7 +38,7 @@ export class AssetsService {
     }
     const ext = extForUpload(meta.kind, meta.mimetype);
     if (ext === null) {
-      throw new BadRequestException('Unsupported image type (allowed: PNG, JPEG, GIF, WebP)');
+      throw new BadRequestException('Unsupported image type (allowed: PNG, JPEG, GIF, WebP, ICO)');
     }
     await mkdir(this.env.ASSET_DIR, { recursive: true });
     const filename = `${randomBytes(16).toString('hex')}${ext}`;

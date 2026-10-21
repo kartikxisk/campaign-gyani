@@ -60,6 +60,9 @@ export class AssetsController {
       return;
     }
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Helmet defaults to same-origin, which blocks <img> loads from the web
+    // origin and from mail clients; assets are public by design.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     if (isSafeImage(asset.mimetype)) {
       res.type(asset.mimetype);
     } else {

@@ -5,6 +5,7 @@ import { api } from './api-client';
 export interface AppConfig {
   brandName: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
   primaryColor: string;
   timezone: string;
   emailFooter: string;
@@ -16,5 +17,5 @@ export function useConfig() {
     queryFn: () => api.get<AppConfig>('/config'),
     staleTime: 5 * 60 * 1000,
   });
-  return q.data ?? { brandName: 'Campaign-Gyani', logoUrl: null, primaryColor: '#0891b2', timezone: 'UTC', emailFooter: '' };
+  return q.data ?? { brandName: 'Campaign-Gyani', logoUrl: null, faviconUrl: null, primaryColor: '#0891b2', timezone: 'UTC', emailFooter: '' };
 }
