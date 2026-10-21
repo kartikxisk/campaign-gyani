@@ -7,6 +7,7 @@ import { PreviewFrame } from '@/components/shell/PreviewFrame';
 import { useListState } from '@/lib/use-list-state';
 import { useList, useSaveItem, useDeleteItem } from '@/lib/resource';
 import { api } from '@/lib/api-client';
+import { AiTemplateModal } from './AiTemplateModal';
 
 interface Attachment { assetId: string; filename: string; }
 interface Template { id: string; name: string; subject: string; envelopeSender: string; externalUrl?: string | null; textBody: string; htmlBody: string; attachments: Attachment[]; updatedAt: string; }
@@ -22,6 +23,7 @@ export function TemplatesScreen() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [toDelete, setToDelete] = useState<Template | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<Template>[] = [
@@ -62,8 +64,9 @@ export function TemplatesScreen() {
         <Drawer open onOpenChange={(o) => !o && setEditing(null)} title={editing.id ? 'Edit template' : 'New template'}
           footer={<><Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={onSave} disabled={save.isPending}>{save.isPending ? 'Saving…' : 'Save template'}</Button></>}>
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-end justify-between gap-2">
               <Field label="Name"><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></Field>
+              <Button variant="secondary" onClick={() => setAiOpen(true)}>✨ Generate with AI</Button>
             </div>
             <Field label="From (envelope sender)" hint="e.g. IT Support <it@yourco.com>"><Input value={editing.envelopeSender} onChange={(e) => setEditing({ ...editing, envelopeSender: e.target.value })} /></Field>
             <div className="flex items-end gap-2">
@@ -100,6 +103,11 @@ export function TemplatesScreen() {
 
       {importOpen && editing && (
         <ImportEmailModal onClose={() => setImportOpen(false)} onImported={(r) => { setEditing({ ...editing, subject: r.subject || editing.subject, htmlBody: r.html, textBody: r.text }); setImportOpen(false); notify('Email imported', 'success'); }} />
+      )}
+
+      {editing && (
+        <AiTemplateModal open={aiOpen} onClose={() => setAiOpen(false)}
+          onApply={(r) => setEditing((e) => e ? { ...e, subject: r.subject || e.subject, htmlBody: r.html || e.htmlBody, textBody: r.text || e.textBody } : e)} />
       )}
 
       <ConfirmDialog open={Boolean(toDelete)} onOpenChange={(o) => !o && setToDelete(null)} title="Delete this template?" body={toDelete?.name} destructive confirmLabel="Delete"

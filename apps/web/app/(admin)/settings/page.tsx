@@ -5,6 +5,7 @@ import { Button, Card, CardHeader, CardBody, Field, Input, Textarea, useToast } 
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { useConfig, type AppConfig } from '@/lib/config';
+import { AiSettings } from '@/modules/settings/AiSettings';
 
 type ImageKey = 'logoUrl' | 'faviconUrl';
 type FormConfig = Omit<AppConfig, ImageKey>;
@@ -68,6 +69,8 @@ export default function SettingsPage() {
           <div><Button onClick={saveCfg} disabled={savingCfg}>{savingCfg ? 'Saving…' : 'Save configuration'}</Button></div>
         </CardBody>
       </Card>
+
+      <AiSettings />
 
       <Card className="max-w-lg">
         <CardHeader title="Change password" />

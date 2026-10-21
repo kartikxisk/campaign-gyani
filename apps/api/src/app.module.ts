@@ -19,6 +19,7 @@ import { ImportModule } from './import/import.module';
 import { SuppressionModule } from './suppression/suppression.module';
 import { ConfigStoreModule } from './config-store/config-store.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { AiModule } from './ai/ai.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
@@ -40,6 +41,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     SuppressionModule,
     ConfigStoreModule,
     WebhooksModule,
+    AiModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     ScheduleModule.forRoot(),
   ],
