@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { useListState } from '@/lib/use-list-state';
 import { useList, useSaveItem, useDeleteItem } from '@/lib/resource';
 import { api } from '@/lib/api-client';
+import { DeliverabilityCheck } from './DeliverabilityCheck';
 
 interface Profile { id: string; name: string; provider: string; fromAddress: string; host: string; port: number; username: string; rateLimit: number; maxConnections: number; maxMessages: number; pool: boolean; ignoreCertErrors: boolean; headers?: Header[]; }
 type Preset = { host?: string; port: number; rateLimit: number; maxConnections: number; maxMessages: number };
@@ -108,6 +109,7 @@ export function SendingProfilesScreen() {
                 <Button variant="secondary" onClick={sendTest} disabled={!testTo}>Send test</Button>
               </div>
             </div>
+            <DeliverabilityCheck fromAddress={editing.fromAddress} />
           </div>
         </Drawer>
       )}
