@@ -1,3 +1,8 @@
 'use client';
 import { CampaignWizard } from '@/modules/campaigns/CampaignWizard';
-export default function Page() { return <CampaignWizard />; }
+import { useViewMode } from '@/lib/view-mode';
+
+export default function Page() {
+  const { mode } = useViewMode();
+  return <CampaignWizard initial={{ type: mode }} />;
+}

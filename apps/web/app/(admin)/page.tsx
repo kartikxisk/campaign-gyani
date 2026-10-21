@@ -5,6 +5,7 @@ import { Button, Card, CardBody, CardHeader, Funnel, StatTile, Trend, EmptyState
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { useCountUp } from '@/lib/use-count-up';
+import { useViewMode } from '@/lib/view-mode';
 
 interface Dashboard {
   totals: { campaigns: number; running: number; complete: number; groups: number; phishing: number; email: number };
@@ -15,19 +16,45 @@ interface Dashboard {
 interface Campaign { id: string; name: string; status: string; type?: string; counts: Record<string, number>; }
 
 export default function DashboardPage() {
+  const { mode } = useViewMode();
+  const email = mode === 'email';
   const { data, isLoading } = useQuery<Dashboard>({ queryKey: ['dashboard'], queryFn: () => api.get<Dashboard>('/reports/dashboard') });
   const recent = useQuery<{ rows: Campaign[] }>({ queryKey: ['campaigns', 'recent'], queryFn: () => api.get<{ rows: Campaign[] }>('/campaigns?limit=5&sort=createdAt&order=desc') });
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="How your campaigns are performing."
+      <PageHeader title="Dashboard" subtitle={`How your ${email ? 'email' : 'phishing'} campaigns are performing.`}
         actions={<Link href="/campaigns/new"><Button>New campaign</Button></Link>} />
 
       {isLoading || !data ? (
         <div className="text-sm text-muted">Loading…</div>
       ) : (
         <div className="space-y-6">
-          {data.totals.phishing > 0 && (
+          {email ? (
+            data.totals.email > 0 ? (
+              <Card>
+                <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center">
+                  <div className="lg:w-60 lg:shrink-0">
+                    <div className="flex gap-8">
+                      <div><div className="text-sm text-muted">Open rate</div><div className="mt-1 font-display text-4xl font-semibold tabular-nums text-ink">{data.email.openRate}<span className="text-lg text-muted">%</span></div></div>
+                      <div><div className="text-sm text-muted">Click rate</div><div className="mt-1 font-display text-4xl font-semibold tabular-nums text-ink">{data.email.clickRate}<span className="text-lg text-muted">%</span></div></div>
+                    </div>
+                    <p className="mt-3 text-sm text-ink-soft">Engagement across every email campaign.</p>
+                  </div>
+                  <div className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6">
+                    <div className="mb-3 font-display text-base font-semibold text-ink">Email engagement</div>
+                    <Funnel steps={[
+                      { label: 'Sent', value: data.email.sent, color: 'var(--cg-sent)' },
+                      { label: 'Opened', value: data.email.opened, color: 'var(--cg-opened)' },
+                      { label: 'Clicked', value: data.email.clicked, color: 'var(--cg-clicked)' },
+                    ]} />
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <EmptyState title="No email campaigns yet" body="Launch an email campaign to see engagement here." action={<Link href="/campaigns/new"><Button size="sm">New campaign</Button></Link>} />
+            )
+          ) : data.totals.phishing > 0 ? (
             <Card>
               <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center">
                 <div className="lg:w-60 lg:shrink-0">
@@ -47,32 +74,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             </Card>
-          )}
-
-          {data.totals.email > 0 && (
-            <Card>
-              <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center">
-                <div className="lg:w-60 lg:shrink-0">
-                  <div className="flex gap-8">
-                    <div><div className="text-sm text-muted">Open rate</div><div className="mt-1 font-display text-4xl font-semibold tabular-nums text-ink">{data.email.openRate}<span className="text-lg text-muted">%</span></div></div>
-                    <div><div className="text-sm text-muted">Click rate</div><div className="mt-1 font-display text-4xl font-semibold tabular-nums text-ink">{data.email.clickRate}<span className="text-lg text-muted">%</span></div></div>
-                  </div>
-                  <p className="mt-3 text-sm text-ink-soft">Engagement across every email campaign.</p>
-                </div>
-                <div className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6">
-                  <div className="mb-3 font-display text-base font-semibold text-ink">Email engagement</div>
-                  <Funnel steps={[
-                    { label: 'Sent', value: data.email.sent, color: 'var(--cg-sent)' },
-                    { label: 'Opened', value: data.email.opened, color: 'var(--cg-opened)' },
-                    { label: 'Clicked', value: data.email.clicked, color: 'var(--cg-clicked)' },
-                  ]} />
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {data.totals.phishing === 0 && data.totals.email === 0 && (
-            <EmptyState title="No activity yet" body="Launch a campaign to see metrics here." action={<Link href="/campaigns/new"><Button size="sm">New campaign</Button></Link>} />
+          ) : (
+            <EmptyState title="No phishing campaigns yet" body="Launch a phishing simulation to see metrics here." action={<Link href="/campaigns/new"><Button size="sm">New campaign</Button></Link>} />
           )}
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -83,13 +86,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-2">
-              <CardHeader title="Phishing success trend" subtitle="Recent campaigns, oldest to newest" />
-              <CardBody>
-                {data.series.length === 0 ? <EmptyState title="No phishing campaigns yet" body="Launch one to see the trend." /> : <Trend points={data.series.map((s) => ({ label: s.name, value: s.successRate }))} />}
-              </CardBody>
-            </Card>
-            <Card className="lg:col-span-3">
+            {!email && (
+              <Card className="lg:col-span-2">
+                <CardHeader title="Phishing success trend" subtitle="Recent campaigns, oldest to newest" />
+                <CardBody>
+                  {data.series.length === 0 ? <EmptyState title="No phishing campaigns yet" body="Launch one to see the trend." /> : <Trend points={data.series.map((s) => ({ label: s.name, value: s.successRate }))} />}
+                </CardBody>
+              </Card>
+            )}
+            <Card className={email ? 'lg:col-span-5' : 'lg:col-span-3'}>
               <CardHeader title="Recent campaigns" actions={<Link href="/campaigns" className="text-sm text-primary hover:underline">View all</Link>} />
               <CardBody className="px-0 py-0">
                 {(recent.data?.rows.length ?? 0) === 0 ? (

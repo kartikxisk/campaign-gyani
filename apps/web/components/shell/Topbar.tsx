@@ -7,6 +7,7 @@ import { Brand, NavLinks } from './Sidebar';
 import { ProfileCard } from './ProfileCard';
 import { NAV_GROUPS } from './nav';
 import { ThemeToggle } from './ThemeToggle';
+import { ViewModeToggle } from './ViewModeToggle';
 
 function crumb(pathname: string): string {
   if (pathname === '/') return 'Dashboard';
@@ -39,6 +40,7 @@ export function Topbar() {
 
       <div className="font-display text-sm font-medium capitalize text-deck-ink">{crumb(pathname)}</div>
       <div className="ml-auto flex items-center gap-2 text-sm">
+        <ViewModeToggle />
         <ThemeToggle />
       </div>
     </header>
