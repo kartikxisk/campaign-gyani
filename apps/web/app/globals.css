@@ -47,3 +47,13 @@ body { background: var(--cg-surface); color: var(--cg-ink); font-family: var(--c
 .cg-animate-toast { animation: cgToastIn .18s ease-out }
 
 @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+
+/* Keep the dark login fields dark through browser autofill. */
+.cg-login-input:-webkit-autofill,
+.cg-login-input:-webkit-autofill:hover,
+.cg-login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--cg-deck-ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--cg-deck-2) inset;
+  caret-color: var(--cg-deck-ink);
+  transition: background-color 9999s ease-out 0s;
+}
