@@ -27,7 +27,7 @@ describe('reports (e2e)', () => {
     await agent.post(`/api/groups/${group.id}/targets`).set('x-csrf-token', csrf).send({ email: 'r@corp.com', firstName: 'R' });
     campaignId = (await agent.post('/api/campaigns').set('x-csrf-token', csrf).send({ name: 'rep', sendByDate: new Date(Date.now() - 1000).toISOString(), templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id] })).body.id;
     await agent.post(`/api/campaigns/${campaignId}/launch`).set('x-csrf-token', csrf);
-    rid = (await agent.get(`/api/campaigns/${campaignId}/results`)).body[0].rid;
+    rid = (await agent.get(`/api/campaigns/${campaignId}/results`)).body.rows[0].rid;
     // simulate open + click
     await request(app.getHttpServer()).get(`/api/t/o/${rid}`);
     await request(app.getHttpServer()).get(`/api/t/c/${rid}`).redirects(0);

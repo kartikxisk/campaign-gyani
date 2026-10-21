@@ -51,7 +51,8 @@ describe('campaigns (e2e)', () => {
     expect(launched.body.status).toBe('RUNNING');
 
     const results = await agent.get(`/api/campaigns/${id}/results`);
-    expect(results.body.length).toBe(1);
+    expect(results.body.rows.length).toBe(1);
+    expect(results.body.total).toBe(1);
 
     const dupLaunch = await agent.post(`/api/campaigns/${id}/launch`).set('x-csrf-token', csrf);
     expect(dupLaunch.status).toBe(409);
@@ -86,8 +87,9 @@ describe('campaigns (e2e)', () => {
     expect(launched.status).toBe(201);
     expect(launched.body.status).toBe('RUNNING');
 
-    const results = await agent.get(`/api/campaigns/${id}/results`);
-    expect(results.body.length).toBe(N);
+    const results = await agent.get(`/api/campaigns/${id}/results?limit=50`);
+    expect(results.body.rows.length).toBe(50);
+    expect(results.body.total).toBe(N);
 
     await agent.delete(`/api/campaigns/${id}`).set('x-csrf-token', csrf);
   }, 30_000);

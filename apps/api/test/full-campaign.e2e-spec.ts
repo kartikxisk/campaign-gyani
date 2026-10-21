@@ -35,7 +35,7 @@ describe('full campaign loop (e2e)', () => {
     })).body;
     await agent.post(`/api/campaigns/${campaign.id}/launch`).set('x-csrf-token', csrf);
 
-    const results = (await agent.get(`/api/campaigns/${campaign.id}/results`)).body;
+    const results = (await agent.get(`/api/campaigns/${campaign.id}/results`)).body.rows;
     expect(results).toHaveLength(1);
     const rid = results[0].rid;
 
@@ -79,7 +79,7 @@ describe('full campaign loop (e2e)', () => {
     const csvResults = await agent.get(`/api/campaigns/${campaign.id}/export/results.csv`);
     expect(csvResults.text).toContain('ada@corp.com');
     const timeline = await agent.get(`/api/campaigns/${campaign.id}/timeline`);
-    const submitted = timeline.body.find((e: { type: string }) => e.type === 'SUBMITTED');
+    const submitted = timeline.body.rows.find((e: { type: string }) => e.type === 'SUBMITTED');
     expect(submitted.payload.username).toBe('ada');
     expect(submitted.payload.password).toBeUndefined();
   });

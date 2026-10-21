@@ -33,7 +33,7 @@ describe('tracking (e2e, public)', () => {
       templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id],
     })).body.id;
     await agent.post(`/api/campaigns/${campaignId}/launch`).set('x-csrf-token', csrf);
-    rid = (await agent.get(`/api/campaigns/${campaignId}/results`)).body[0].rid;
+    rid = (await agent.get(`/api/campaigns/${campaignId}/results`)).body.rows[0].rid;
   });
   afterAll(async () => { await app?.close(); });
 
@@ -67,12 +67,12 @@ describe('tracking (e2e, public)', () => {
 
     // verify via admin timeline: SUBMITTED event has username but not password
     const timeline = await agent.get(`/api/campaigns/${campaignId}/timeline`);
-    const submitted = timeline.body.find((e: { type: string }) => e.type === 'SUBMITTED');
+    const submitted = timeline.body.rows.find((e: { type: string }) => e.type === 'SUBMITTED');
     expect(submitted.payload.username).toBe('vic');
     expect(submitted.payload.password).toBeUndefined();
-    expect(timeline.body.some((e: { type: string }) => e.type === 'OPENED')).toBe(true);
-    expect(timeline.body.some((e: { type: string }) => e.type === 'CLICKED')).toBe(true);
-    expect(timeline.body.some((e: { type: string }) => e.type === 'REPORTED')).toBe(true);
+    expect(timeline.body.rows.some((e: { type: string }) => e.type === 'OPENED')).toBe(true);
+    expect(timeline.body.rows.some((e: { type: string }) => e.type === 'CLICKED')).toBe(true);
+    expect(timeline.body.rows.some((e: { type: string }) => e.type === 'REPORTED')).toBe(true);
   });
 
   it('rejects an oversized submit body (capture endpoint is unauthenticated)', async () => {
@@ -88,7 +88,7 @@ describe('tracking (e2e, public)', () => {
     const res = await request(app.getHttpServer()).post(`/api/t/s/${rid}`).type('form').send(body).redirects(0);
     expect(res.status).toBe(302);
     const timeline = await agent.get(`/api/campaigns/${campaignId}/timeline`);
-    const submits = timeline.body.filter((e: { type: string }) => e.type === 'SUBMITTED');
+    const submits = timeline.body.rows.filter((e: { type: string }) => e.type === 'SUBMITTED');
     const latest = submits[submits.length - 1];
     expect(Object.keys(latest.payload).length).toBeLessThanOrEqual(50);
   });

@@ -11,6 +11,9 @@ function token(bytes = 24): string {
   return randomBytes(bytes).toString('base64url');
 }
 
+export type ResultListParams = ListParamsInput & { status?: ResultStatus };
+export type TimelineListParams = ListParamsInput & { resultId?: string };
+
 @Injectable()
 export class CampaignsService {
   constructor(
@@ -148,55 +151,65 @@ export class CampaignsService {
     const now = Date.now();
     const sendAt = Math.max(campaign.sendByDate.getTime(), now);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Atomic guard: only one launch wins even under concurrent requests.
-      const flip = await tx.campaign.updateMany({
-        where: { id, status: CampaignStatus.DRAFT },
-        data: { status: sendAt > now ? CampaignStatus.SCHEDULED : CampaignStatus.RUNNING, launchedAt: new Date() },
-      });
-      if (flip.count === 0) throw new ConflictException('Campaign has already been launched');
-      const campaignGroups = await tx.campaignGroup.findMany({ where: { campaignId: id }, select: { groupId: true } });
-      const groupIdList = campaignGroups.map((g) => g.groupId);
-      const targets = await tx.target.findMany({ where: { groupId: { in: groupIdList } } });
-      // De-dup targets by email across groups.
-      const byEmail = new Map<string, (typeof targets)[number]>();
-      for (const t of targets) if (!byEmail.has(t.email.toLowerCase())) byEmail.set(t.email.toLowerCase(), t);
-      // Email mode honors the suppression list — unsubscribed recipients are skipped.
-      if (campaign.type === 'email') {
-        const suppressed = await this.suppression.suppressedSet([...byEmail.keys()]);
-        for (const email of suppressed) byEmail.delete(email);
-      }
+    const CHUNK = 1000;
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        // Atomic guard: only one launch wins even under concurrent requests.
+        const flip = await tx.campaign.updateMany({
+          where: { id, status: CampaignStatus.DRAFT },
+          data: { status: sendAt > now ? CampaignStatus.SCHEDULED : CampaignStatus.RUNNING, launchedAt: new Date() },
+        });
+        if (flip.count === 0) throw new ConflictException('Campaign has already been launched');
+        const campaignGroups = await tx.campaignGroup.findMany({ where: { campaignId: id }, select: { groupId: true } });
+        const groupIdList = campaignGroups.map((g) => g.groupId);
+        const targets = await tx.target.findMany({
+          where: { groupId: { in: groupIdList } },
+          select: { id: true, email: true, firstName: true, lastName: true, position: true },
+        });
+        // De-dup targets by email across groups.
+        const byEmail = new Map<string, (typeof targets)[number]>();
+        for (const t of targets) if (!byEmail.has(t.email.toLowerCase())) byEmail.set(t.email.toLowerCase(), t);
+        // Email mode honors the suppression list — unsubscribed recipients are skipped.
+        if (campaign.type === 'email') {
+          const suppressed = await this.suppression.suppressedSet([...byEmail.keys()]);
+          for (const email of suppressed) byEmail.delete(email);
+        }
 
-      const rows = [...byEmail.values()].map((t) => ({
-        campaignId: id,
-        targetId: t.id,
-        templateId: campaign.shuffleTemplates
-          ? templateIds[Math.floor(Math.random() * templateIds.length)]!
-          : templateIds[0]!,
-        email: t.email,
-        firstName: t.firstName,
-        lastName: t.lastName,
-        position: t.position,
-        rid: token(16),
-      }));
-      // Bulk-insert in chunks (one statement each). A per-row create() loop here
-      // scales the interactive transaction's duration with recipient count and
-      // blows its 5s timeout for large campaigns (a few thousand recipients).
-      const CHUNK = 1000;
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        await tx.campaignResult.createMany({ data: rows.slice(i, i + CHUNK) });
-      }
-      const created = await tx.campaignResult.findMany({ where: { campaignId: id }, select: { id: true } });
-      const updated = await tx.campaign.findUniqueOrThrow({ where: { id } });
-      return { created, updated };
-    });
+        const rows = [...byEmail.values()].map((t) => ({
+          campaignId: id,
+          targetId: t.id,
+          templateId: campaign.shuffleTemplates
+            ? templateIds[Math.floor(Math.random() * templateIds.length)]!
+            : templateIds[0]!,
+          email: t.email,
+          firstName: t.firstName,
+          lastName: t.lastName,
+          position: t.position,
+          rid: token(16),
+        }));
+        // Bulk-insert in chunks (one statement each). A per-row create() loop here
+        // scales the transaction's duration with recipient count.
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          await tx.campaignResult.createMany({ data: rows.slice(i, i + CHUNK) });
+        }
+        return tx.campaign.findUniqueOrThrow({ where: { id } });
+      },
+      // A 100k-recipient launch inserts 100 batches; the default 5s interactive
+      // timeout is far too short. Give the atomic snapshot room to complete.
+      { timeout: 10 * 60_000, maxWait: 30_000 },
+    );
 
-    await this.queue.enqueue(result.created.map((r) => ({ resultId: r.id, sendAt })));
+    // Read ids and enqueue outside the transaction to keep it (and its held
+    // connection) as short as possible; results belong only to this launch.
+    const created = await this.prisma.campaignResult.findMany({ where: { campaignId: id }, select: { id: true } });
+    for (let i = 0; i < created.length; i += CHUNK) {
+      await this.queue.enqueue(created.slice(i, i + CHUNK).map((r) => ({ resultId: r.id, sendAt })));
+    }
     if (campaign.repeat && campaign.repeat !== 'NONE' && !campaign.parentId) {
       const next = advance(new Date(sendAt), campaign.repeat as Repeat);
       await this.prisma.campaign.update({ where: { id }, data: { nextRunAt: next } });
     }
-    return result.updated;
+    return updated;
   }
 
   async complete(id: string): Promise<Campaign> {
@@ -218,17 +231,39 @@ export class CampaignsService {
     return { publicEnabled: updated.publicEnabled, publicCode: updated.publicCode };
   }
 
-  async results(id: string): Promise<unknown[]> {
+  async results(id: string, params: ResultListParams = {}): Promise<ListResult<unknown>> {
     await this.findOne(id);
-    return this.prisma.campaignResult.findMany({ where: { campaignId: id }, orderBy: { createdAt: 'asc' } });
+    const { where, skip, take, page, limit } = parseListQuery(params, {
+      searchFields: ['email', 'firstName', 'lastName'],
+      sortable: ['createdAt', 'email', 'status'],
+      defaultSort: 'createdAt',
+      defaultLimit: 50,
+    });
+    // A single campaign can hold 100k result rows; never return them unbounded.
+    const scoped = { campaignId: id, ...(params.status ? { status: params.status } : {}), ...(where ?? {}) };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.campaignResult.findMany({ where: scoped, orderBy: { createdAt: 'asc' }, skip, take }),
+      this.prisma.campaignResult.count({ where: scoped }),
+    ]);
+    return { rows, total, page, limit };
   }
 
-  async timeline(id: string): Promise<unknown[]> {
+  async timeline(id: string, params: TimelineListParams = {}): Promise<ListResult<unknown>> {
     await this.findOne(id);
-    return this.prisma.campaignEvent.findMany({
-      where: { result: { campaignId: id } },
-      orderBy: { createdAt: 'asc' },
+    const { skip, take, page, limit } = parseListQuery(params, {
+      searchFields: [],
+      sortable: ['createdAt'],
+      defaultSort: 'createdAt',
+      defaultLimit: 100,
     });
+    // A 100k campaign can hold hundreds of thousands of events. The per-recipient
+    // drawer passes resultId for a small, bounded slice; the full feed paginates.
+    const where = { result: { campaignId: id }, ...(params.resultId ? { resultId: params.resultId } : {}) };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.campaignEvent.findMany({ where, orderBy: { createdAt: 'asc' }, skip, take }),
+      this.prisma.campaignEvent.count({ where }),
+    ]);
+    return { rows, total, page, limit };
   }
 
   async remove(id: string): Promise<void> {

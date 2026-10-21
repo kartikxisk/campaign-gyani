@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { ZodBodyPipe } from '../common/zod.pipe';
 import { SessionGuard } from '../auth/session.guard';
 import type { ListParamsInput } from '../common/list-query';
-import { CampaignsService } from './campaigns.service';
+import { CampaignsService, type ResultListParams, type TimelineListParams } from './campaigns.service';
 
 const visibilitySchema = z.object({ enabled: z.boolean() });
 
@@ -25,13 +25,13 @@ export class CampaignsController {
   }
 
   @Get(':id/results')
-  results(@Param('id') id: string) {
-    return this.service.results(id);
+  results(@Param('id') id: string, @Query() q: ResultListParams) {
+    return this.service.results(id, q);
   }
 
   @Get(':id/timeline')
-  timeline(@Param('id') id: string) {
-    return this.service.timeline(id);
+  timeline(@Param('id') id: string, @Query() q: TimelineListParams) {
+    return this.service.timeline(id, q);
   }
 
   @Post()

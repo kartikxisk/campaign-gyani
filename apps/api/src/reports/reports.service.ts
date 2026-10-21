@@ -120,14 +120,16 @@ export class ReportsService {
 
   async publicResults(code: string): Promise<unknown[]> {
     const campaign = await this.resolvePublic(code);
-    const rows = await this.prisma.campaignResult.findMany({ where: { campaignId: campaign.id }, orderBy: { createdAt: 'asc' } });
+    // Public, unauthenticated surface — never dump a 100k campaign; the counts
+    // endpoint carries the summary. Cap the per-recipient rows.
+    const rows = await this.prisma.campaignResult.findMany({ where: { campaignId: campaign.id }, orderBy: { createdAt: 'asc' }, take: 500 });
     // No email / rid / ids — only non-identifying funnel data.
     return rows.map((r) => ({ firstName: r.firstName, lastName: r.lastName, position: r.position, status: r.status, reported: r.reported }));
   }
 
   async publicTimeline(code: string): Promise<unknown[]> {
     const campaign = await this.resolvePublic(code);
-    const events = await this.prisma.campaignEvent.findMany({ where: { result: { campaignId: campaign.id } }, orderBy: { createdAt: 'asc' } });
+    const events = await this.prisma.campaignEvent.findMany({ where: { result: { campaignId: campaign.id } }, orderBy: { createdAt: 'asc' }, take: 2000 });
     // No IP / user-agent / payload on the public surface.
     return events.map((e) => ({ type: e.type, createdAt: e.createdAt }));
   }

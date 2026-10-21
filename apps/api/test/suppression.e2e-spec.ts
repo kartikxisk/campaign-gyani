@@ -53,7 +53,7 @@ describe('suppression + unsubscribe (email mode, e2e)', () => {
     })).body;
     expect(campaign.status).toBe('DRAFT'); // no landing required in email mode
     await agent.post(`/api/campaigns/${campaign.id}/launch`).set('x-csrf-token', csrf);
-    const results = (await agent.get(`/api/campaigns/${campaign.id}/results`)).body;
+    const results = (await agent.get(`/api/campaigns/${campaign.id}/results`)).body.rows;
     expect(results).toHaveLength(1);
     expect(results[0].email).toBe('keep@corp.com');
 
