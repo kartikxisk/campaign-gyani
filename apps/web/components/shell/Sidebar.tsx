@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@cg/ui';
 import { Icon } from './icons';
-import { NAV_GROUPS } from './nav';
+import { navFor } from './nav';
 import { useConfig } from '@/lib/config';
+import { useViewMode } from '@/lib/view-mode';
 import { ProfileCard } from './ProfileCard';
 
 function isActive(pathname: string, href: string): boolean {
@@ -13,7 +14,8 @@ function isActive(pathname: string, href: string): boolean {
 
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const groups = NAV_GROUPS;
+  const { mode } = useViewMode();
+  const groups = navFor(mode);
   return (
     <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
       {groups.map((group) => (

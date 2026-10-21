@@ -1,5 +1,7 @@
 'use client';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@cg/ui';
+import { isAvailableIn } from './nav';
 import { useViewMode, type ViewMode } from '@/lib/view-mode';
 
 const OPTIONS: { value: ViewMode; label: string }[] = [
@@ -9,6 +11,13 @@ const OPTIONS: { value: ViewMode; label: string }[] = [
 
 export function ViewModeToggle() {
   const { mode, setMode } = useViewMode();
+  const pathname = usePathname();
+  const router = useRouter();
+  const choose = (next: ViewMode) => {
+    setMode(next);
+    // Don't strand the user on a page the new mode hides from the nav.
+    if (!isAvailableIn(pathname, next)) router.push('/');
+  };
   return (
     <div role="group" aria-label="Console mode" className="flex items-center rounded-cg-sm bg-white/5 p-0.5">
       {OPTIONS.map((o) => {
@@ -18,7 +27,7 @@ export function ViewModeToggle() {
             key={o.value}
             type="button"
             aria-pressed={active}
-            onClick={() => setMode(o.value)}
+            onClick={() => choose(o.value)}
             className={cn(
               'rounded-[6px] px-2.5 py-1 text-xs font-medium transition-colors',
               active ? 'bg-primary text-primary-ink' : 'text-deck-muted hover:text-deck-ink',
