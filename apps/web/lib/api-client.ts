@@ -37,7 +37,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   // which handle their own 401s — login errors, the /me probe).
   if (res.status === 401 && !path.startsWith('/auth/') && typeof window !== 'undefined') {
     csrfToken = null;
-    window.location.href = '/login';
+    // Drop the (now invalid) session cookie server-side so /login doesn't loop.
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).finally(() => {
+      window.location.href = '/login';
+    });
   }
   if (!res.ok) {
     let body: unknown;
