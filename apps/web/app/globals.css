@@ -48,15 +48,20 @@ body { background: var(--cg-surface); color: var(--cg-ink); font-family: var(--c
 
 @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
 
-/* Keep the dark login fields dark through browser autofill. */
+/* Hold the login fields on the panel color through browser autofill (theme-aware). */
 .cg-login-input:-webkit-autofill,
 .cg-login-input:-webkit-autofill:hover,
 .cg-login-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--cg-deck-ink);
-  -webkit-box-shadow: 0 0 0 1000px var(--cg-deck-2) inset;
-  caret-color: var(--cg-deck-ink);
+  -webkit-text-fill-color: var(--cg-ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--cg-panel) inset;
+  caret-color: var(--cg-ink);
   transition: background-color 9999s ease-out 0s;
 }
+
+/* One orchestrated reveal of the sign-in block on load. */
+@keyframes cgSignInRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.cg-signin-rise { animation: cgSignInRise .4s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .cg-signin-rise { animation: none !important; } }
 
 /* Login brand-panel aurora — slow drifting glow, replaces the static grid. */
 @keyframes cgAuroraA {

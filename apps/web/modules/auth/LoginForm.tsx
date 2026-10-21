@@ -48,6 +48,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           type="email"
           autoFocus
           autoComplete="username"
+          className="cg-login-input"
           placeholder="you@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -59,6 +60,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           id="password"
           type="password"
           autoComplete="current-password"
+          className="cg-login-input"
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
