@@ -11,14 +11,17 @@ export default function LoginPage() {
   const Mark = ({ size }: { size: number }) =>
     logoUrl
       ? <img src={logoUrl} alt={brandName} style={{ height: size, width: size }} className="rounded-cg-sm object-contain" />
-      : <span style={{ height: size, width: size }} className="flex items-center justify-center rounded-cg-sm bg-primary text-primary-ink" aria-label={brandName}><PhishMark className="h-3/5 w-3/5" tone="ink" /></span>;
+      : null;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[46fr_54fr]">
       {/* Brand panel — hidden on small screens */}
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-deck p-12 lg:flex">
-        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{ backgroundImage: 'linear-gradient(var(--cg-deck-ink) 1px, transparent 1px), linear-gradient(90deg, var(--cg-deck-ink) 1px, transparent 1px)', backgroundSize: '52px 52px' }} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="cg-aurora cg-aurora-a" style={{ top: '-10%', left: '-8%', width: '60%', height: '60%', background: 'radial-gradient(circle, var(--cg-primary), transparent 70%)' }} />
+          <div className="cg-aurora cg-aurora-b" style={{ bottom: '-14%', left: '18%', width: '55%', height: '55%', background: 'radial-gradient(circle, var(--cg-submitted), transparent 70%)' }} />
+          <div className="cg-aurora cg-aurora-c" style={{ top: '22%', right: '-12%', width: '52%', height: '52%', background: 'radial-gradient(circle, var(--cg-clicked), transparent 70%)' }} />
+        </div>
         <div className="relative"><Mark size={40} /></div>
         <div className="relative max-w-sm">
           <PhishMark className="mb-8 h-36 w-auto" />

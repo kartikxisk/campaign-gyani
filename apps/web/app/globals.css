@@ -57,3 +57,25 @@ body { background: var(--cg-surface); color: var(--cg-ink); font-family: var(--c
   caret-color: var(--cg-deck-ink);
   transition: background-color 9999s ease-out 0s;
 }
+
+/* Login brand-panel aurora — slow drifting glow, replaces the static grid. */
+@keyframes cgAuroraA {
+  0%   { transform: translate(-8%, -6%) scale(1);    }
+  50%  { transform: translate(10%, 8%)  scale(1.18); }
+  100% { transform: translate(-8%, -6%) scale(1);    }
+}
+@keyframes cgAuroraB {
+  0%   { transform: translate(6%, 10%)  scale(1.1);  }
+  50%  { transform: translate(-10%, -4%) scale(0.9); }
+  100% { transform: translate(6%, 10%)  scale(1.1);  }
+}
+@keyframes cgAuroraC {
+  0%   { transform: translate(0, 4%)   scale(1);     }
+  50%  { transform: translate(-6%, -8%) scale(1.22); }
+  100% { transform: translate(0, 4%)   scale(1);     }
+}
+.cg-aurora { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .42; will-change: transform; }
+.cg-aurora-a { animation: cgAuroraA 22s ease-in-out infinite; }
+.cg-aurora-b { animation: cgAuroraB 28s ease-in-out infinite; }
+.cg-aurora-c { animation: cgAuroraC 19s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .cg-aurora { animation: none !important; } }
