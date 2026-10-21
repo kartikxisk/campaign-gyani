@@ -5,6 +5,7 @@ import { cn } from '@cg/ui';
 import { Icon } from './icons';
 import { NAV_GROUPS } from './nav';
 import { useConfig } from '@/lib/config';
+import { ProfileCard } from './ProfileCard';
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -56,7 +57,7 @@ export function Sidebar() {
     <aside className="hidden w-64 shrink-0 flex-col bg-deck md:flex">
       <Brand />
       <NavLinks />
-      <div className="px-5 py-3 text-[11px] text-deck-muted/60">Awareness console</div>
+      <ProfileCard />
     </aside>
   );
 }

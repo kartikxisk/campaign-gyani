@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateStep, toCreatePayload, stepsFor, type WizardData } from '../wizard-validate';
 
-const base: WizardData = { type: 'phishing', name: 'Q4', groupIds: ['g1'], templateIds: ['t1'], shuffleTemplates: null, pageId: 'p1', smtpId: 's1', sendByDate: '2026-11-01T10:00' };
+const base: WizardData = { type: 'phishing', name: 'Q4', groupIds: ['g1'], templateIds: ['t1'], shuffleTemplates: null, pageId: 'p1', smtpId: 's1', sendByDate: '2026-11-01T10:00', repeat: 'NONE' };
 
 describe('stepsFor', () => {
   it('drops the landing step in email mode', () => {
