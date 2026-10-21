@@ -45,7 +45,7 @@ export function Brand() {
     <Link href="/" className="flex items-center gap-2.5 px-5 py-4">
       {logoUrl
         ? <img src={logoUrl} alt="" className="h-8 w-8 rounded-cg-sm object-contain" />
-        : <span className="flex h-8 w-8 items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">{brandName.slice(0, 2).toLowerCase()}</span>}
+        : <span className="flex h-8 w-8 items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">{initials(brandName)}</span>}
       <span className="font-display font-semibold text-deck-ink">{brandName}</span>
     </Link>
   );
@@ -59,4 +59,9 @@ export function Sidebar() {
       <div className="px-5 py-3 text-[11px] text-deck-muted/60">Awareness console</div>
     </aside>
   );
+}
+
+function initials(name: string): string {
+  const parts = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  return (parts.length >= 2 ? parts[0]![0]! + parts[1]![0]! : (parts[0] ?? '').slice(0, 2)).toLowerCase();
 }

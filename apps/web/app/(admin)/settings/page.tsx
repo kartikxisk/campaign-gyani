@@ -59,7 +59,7 @@ export default function SettingsPage() {
           <Field label="Timezone" hint="IANA name, e.g. America/New_York"><Input value={cfg.timezone} onChange={(e) => setCfg({ ...cfg, timezone: e.target.value })} /></Field>
           <Field label="Logo">
             <div className="flex items-center gap-3">
-              {cfg.logoUrl ? <img src={cfg.logoUrl} alt="" className="h-10 w-10 rounded-cg-sm object-contain" /> : <span className="flex h-10 w-10 items-center justify-center rounded-cg-sm bg-primary text-sm font-bold text-primary-ink">{cfg.brandName.slice(0, 2).toLowerCase()}</span>}
+              {cfg.logoUrl ? <img src={cfg.logoUrl} alt="" className="h-10 w-10 rounded-cg-sm object-contain" /> : <span className="flex h-10 w-10 items-center justify-center rounded-cg-sm bg-primary text-sm font-bold text-primary-ink">{initials(cfg.brandName)}</span>}
               <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadLogo(f); }} />
               <Button variant="secondary" size="sm" onClick={() => logoRef.current?.click()}>Upload</Button>
               {cfg.logoUrl && <Button variant="ghost" size="sm" onClick={() => setCfg({ ...cfg, logoUrl: null })}>Remove</Button>}
@@ -80,4 +80,9 @@ export default function SettingsPage() {
       </Card>
     </div>
   );
+}
+
+function initials(name: string): string {
+  const parts = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  return (parts.length >= 2 ? parts[0]![0]! + parts[1]![0]! : (parts[0] ?? '').slice(0, 2)).toLowerCase();
 }

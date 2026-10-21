@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { useListState } from '@/lib/use-list-state';
 import { useList, useDeleteItem } from '@/lib/resource';
 
-interface Campaign { id: string; name: string; status: string; launchedAt: string | null; sendByDate: string; counts: Record<string, number>; }
+interface Campaign { id: string; name: string; status: string; type?: string; launchedAt: string | null; sendByDate: string; counts: Record<string, number>; }
 
 export function CampaignsScreen() {
   const ls = useListState({ sort: 'createdAt' });
@@ -18,6 +18,7 @@ export function CampaignsScreen() {
   const columns: Column<Campaign>[] = [
     { key: 'name', header: 'Campaign', sortable: true, render: (r) => <Link href={`/campaigns/${r.id}`} className="font-medium text-primary hover:underline">{r.name}</Link> },
     { key: 'status', header: 'Status', sortable: true, render: (r) => <Badge tone={statusTone[r.status] ?? 'neutral'}>{r.status}</Badge> },
+    { key: 'type', header: 'Type', render: (r) => <Badge tone={r.type === 'email' ? 'opened' : 'warn'}>{r.type === 'email' ? 'Email' : 'Phishing'}</Badge> },
     { key: 'sent', header: 'Sent', align: 'right', render: (r) => <span className="font-mono tabular-nums">{r.counts.SENT ?? 0}</span> },
     { key: 'opened', header: 'Opened', align: 'right', render: (r) => <span className="font-mono tabular-nums text-opened">{r.counts.OPENED ?? 0}</span> },
     { key: 'submitted', header: 'Submitted', align: 'right', render: (r) => <span className="font-mono tabular-nums text-submitted">{r.counts.SUBMITTED ?? 0}</span> },
