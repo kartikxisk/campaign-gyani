@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/modules/auth/LoginForm';
 import { useConfig } from '@/lib/config';
+import { PhishMark } from '@/components/shell/PhishMark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function LoginPage() {
   const Mark = ({ size }: { size: number }) =>
     logoUrl
       ? <img src={logoUrl} alt={brandName} style={{ height: size, width: size }} className="rounded-cg-sm object-contain" />
-      : <span style={{ height: size, width: size }} className="flex items-center justify-center rounded-cg-sm bg-primary font-display text-sm font-bold text-primary-ink">{initials(brandName)}</span>;
+      : <span style={{ height: size, width: size }} className="flex items-center justify-center rounded-cg-sm bg-primary text-primary-ink" aria-label={brandName}><PhishMark className="h-3/5 w-3/5" tone="ink" /></span>;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[46fr_54fr]">
@@ -20,6 +21,7 @@ export default function LoginPage() {
           style={{ backgroundImage: 'linear-gradient(var(--cg-deck-ink) 1px, transparent 1px), linear-gradient(90deg, var(--cg-deck-ink) 1px, transparent 1px)', backgroundSize: '52px 52px' }} />
         <div className="relative"><Mark size={40} /></div>
         <div className="relative max-w-sm">
+          <PhishMark className="mb-8 h-36 w-auto" />
           <h2 className="font-display text-[34px] font-semibold leading-[1.15] text-deck-ink">Run the drill. Watch who takes the bait.</h2>
           <p className="mt-4 text-[15px] leading-relaxed text-deck-muted">Launch phishing simulations and email campaigns, then track every open, click and catch.</p>
           <div className="mt-6 h-[3px] w-32 rounded-full"
@@ -37,9 +39,4 @@ export default function LoginPage() {
       </section>
     </main>
   );
-}
-
-function initials(name: string): string {
-  const parts = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
-  return (parts.length >= 2 ? parts[0]![0]! + parts[1]![0]! : (parts[0] ?? '').slice(0, 2)).toLowerCase();
 }
