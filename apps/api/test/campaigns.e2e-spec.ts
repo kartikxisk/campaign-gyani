@@ -66,6 +66,32 @@ describe('campaigns (e2e)', () => {
     expect((await agent.delete(`/api/campaigns/${id}`).set('x-csrf-token', csrf)).status).toBe(200);
   });
 
+  it('launches a large campaign without the transaction timing out', async () => {
+    const { tpl, page, smtp } = await buildDeps();
+    const group = (await agent.post('/api/groups').set('x-csrf-token', csrf).send({ name: 'Big' + Math.random() })).body;
+    const N = 8000;
+    let csv = 'firstName,lastName,email,position\n';
+    for (let i = 0; i < N; i++) csv += `F${i},L${i},scale${i}@load.test,R\n`;
+    const imp = await agent.post(`/api/groups/${group.id}/targets/csv`).set('x-csrf-token', csrf)
+      .attach('file', Buffer.from(csv), 'targets.csv');
+    expect(imp.body.inserted).toBe(N);
+
+    const created = await agent.post('/api/campaigns').set('x-csrf-token', csrf).send({
+      name: 'Scale', type: 'email', sendByDate: new Date(Date.now() - 1000).toISOString(),
+      templateIds: [tpl.id], pageId: page.id, smtpId: smtp.id, groupIds: [group.id],
+    });
+    const id = created.body.id;
+
+    const launched = await agent.post(`/api/campaigns/${id}/launch`).set('x-csrf-token', csrf);
+    expect(launched.status).toBe(201);
+    expect(launched.body.status).toBe('RUNNING');
+
+    const results = await agent.get(`/api/campaigns/${id}/results`);
+    expect(results.body.length).toBe(N);
+
+    await agent.delete(`/api/campaigns/${id}`).set('x-csrf-token', csrf);
+  }, 30_000);
+
   it('rejects a multi-template campaign without a shuffle choice', async () => {
     const { tpl, page, smtp, group } = await buildDeps();
     const tpl2 = (await agent.post('/api/templates').set('x-csrf-token', csrf)

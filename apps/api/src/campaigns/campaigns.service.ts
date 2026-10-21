@@ -167,25 +167,26 @@ export class CampaignsService {
         for (const email of suppressed) byEmail.delete(email);
       }
 
-      const created = [];
-      for (const t of byEmail.values()) {
-        const templateId = campaign.shuffleTemplates
+      const rows = [...byEmail.values()].map((t) => ({
+        campaignId: id,
+        targetId: t.id,
+        templateId: campaign.shuffleTemplates
           ? templateIds[Math.floor(Math.random() * templateIds.length)]!
-          : templateIds[0]!;
-        const row = await tx.campaignResult.create({
-          data: {
-            campaignId: id,
-            targetId: t.id,
-            templateId,
-            email: t.email,
-            firstName: t.firstName,
-            lastName: t.lastName,
-            position: t.position,
-            rid: token(16),
-          },
-        });
-        created.push(row);
+          : templateIds[0]!,
+        email: t.email,
+        firstName: t.firstName,
+        lastName: t.lastName,
+        position: t.position,
+        rid: token(16),
+      }));
+      // Bulk-insert in chunks (one statement each). A per-row create() loop here
+      // scales the interactive transaction's duration with recipient count and
+      // blows its 5s timeout for large campaigns (a few thousand recipients).
+      const CHUNK = 1000;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        await tx.campaignResult.createMany({ data: rows.slice(i, i + CHUNK) });
       }
+      const created = await tx.campaignResult.findMany({ where: { campaignId: id }, select: { id: true } });
       const updated = await tx.campaign.findUniqueOrThrow({ where: { id } });
       return { created, updated };
     });
