@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { useListState } from '@/lib/use-list-state';
+import { useDateFmt } from '@/lib/datetime';
 import { useList, useSaveItem, useDeleteItem } from '@/lib/resource';
 
 interface Suppression { id: string; email: string; reason: string; createdAt: string; }
@@ -17,6 +18,7 @@ export function SuppressionsScreen() {
   const { notify } = useToast();
   const [email, setEmail] = useState('');
   const [toDelete, setToDelete] = useState<Suppression | null>(null);
+  const fmt = useDateFmt();
   const webhook = useQuery<{ url: string }>({ queryKey: ['webhook', 'token'], queryFn: () => api.get<{ url: string }>('/webhooks/token') });
 
   const add = async () => {
@@ -27,7 +29,7 @@ export function SuppressionsScreen() {
   const columns: Column<Suppression>[] = [
     { key: 'email', header: 'Email', mono: true, render: (r) => <span className="font-mono text-ink">{r.email}</span> },
     { key: 'reason', header: 'Reason' },
-    { key: 'createdAt', header: 'Added', render: (r) => <span className="text-muted">{new Date(r.createdAt).toLocaleDateString()}</span> },
+    { key: 'createdAt', header: 'Added', render: (r) => <span className="text-muted">{fmt.date(r.createdAt)}</span> },
   ];
 
   return (

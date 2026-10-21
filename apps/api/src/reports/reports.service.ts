@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CampaignStatus, ResultStatus } from '@prisma/client';
-import { successRate } from '@cg/shared';
+import { successRate, openRate, clickRate } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SENT_RANK = [ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED];
@@ -36,25 +36,38 @@ export class ReportsService {
       this.prisma.campaign.count({ where: { status: CampaignStatus.COMPLETE } }),
       this.prisma.targetGroup.count(),
     ]);
-    const [sent, opened, clicked, submitted, reported] = await this.prisma.$transaction([
-      this.prisma.campaignResult.count({ where: { status: { in: SENT_RANK } } }),
-      this.prisma.campaignResult.count({ where: { events: { some: { type: 'OPENED' } } } }),
-      this.prisma.campaignResult.count({ where: { events: { some: { type: 'CLICKED' } } } }),
-      this.prisma.campaignResult.count({ where: { events: { some: { type: 'SUBMITTED' } } } }),
-      this.prisma.campaignResult.count({ where: { reported: true } }),
+
+    const byType = async (type: 'phishing' | 'email') => {
+      const [sent, opened, clicked, submitted, reported] = await this.prisma.$transaction([
+        this.prisma.campaignResult.count({ where: { campaign: { type }, status: { in: SENT_RANK } } }),
+        this.prisma.campaignResult.count({ where: { campaign: { type }, events: { some: { type: 'OPENED' } } } }),
+        this.prisma.campaignResult.count({ where: { campaign: { type }, events: { some: { type: 'CLICKED' } } } }),
+        this.prisma.campaignResult.count({ where: { campaign: { type }, events: { some: { type: 'SUBMITTED' } } } }),
+        this.prisma.campaignResult.count({ where: { campaign: { type }, reported: true } }),
+      ]);
+      return { sent, opened, clicked, submitted, reported };
+    };
+    const [campaignsByType, ph, em] = await Promise.all([
+      this.prisma.campaign.groupBy({ by: ['type'], _count: { _all: true } }),
+      byType('phishing'),
+      byType('email'),
     ]);
+    const typeCounts: Record<string, number> = {};
+    for (const g of campaignsByType) typeCounts[g.type] = g._count._all;
+
     const recent = await this.prisma.campaign.findMany({
-      where: { launchedAt: { not: null } },
+      where: { launchedAt: { not: null }, type: 'phishing' },
       orderBy: { launchedAt: 'desc' },
       take: 10,
     });
     const series = await Promise.all(
       recent.map(async (c) => ({ id: c.id, name: c.name, launchedAt: c.launchedAt, successRate: (await this.counts(c.id)).successRate })),
     );
+
     return {
-      totals: { campaigns: totalCampaigns, running, complete, groups: totalGroups },
-      events: { sent, opened, clicked, submitted, reported },
-      overallSuccessRate: successRate(sent, opened, submitted, reported),
+      totals: { campaigns: totalCampaigns, running, complete, groups: totalGroups, phishing: typeCounts.phishing ?? 0, email: typeCounts.email ?? 0 },
+      phishing: { ...ph, successRate: successRate(ph.sent, ph.opened, ph.submitted, ph.reported) },
+      email: { sent: em.sent, opened: em.opened, clicked: em.clicked, openRate: openRate(em.sent, em.opened), clickRate: clickRate(em.sent, em.clicked) },
       series: series.reverse(),
     };
   }

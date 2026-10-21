@@ -63,6 +63,23 @@ describe('SendProcessor.deliver', () => {
     expect(mailer.sent[0]?.html).toContain('/api/t/o/RID1'); // pixel injected
   });
 
+  it('auto-completes the campaign once the last send finishes (non-recurring)', async () => {
+    const proc = new SendProcessor(prisma, render, new FakeMailer('ok'), new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any, { get: async () => ({ emailFooter: '' }) } as any);
+    const { result } = await makeResult();
+    await proc.deliver(result.id, 1, 3);
+    const camp = await prisma.campaign.findUniqueOrThrow({ where: { id: result.campaignId } });
+    expect(camp.status).toBe('COMPLETE');
+    expect(camp.completedAt).not.toBeNull();
+  });
+
+  it('keeps a recurring series RUNNING after a send', async () => {
+    const proc = new SendProcessor(prisma, render, new FakeMailer('ok'), new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any, { get: async () => ({ emailFooter: '' }) } as any);
+    const { result } = await makeResult();
+    await prisma.campaign.update({ where: { id: result.campaignId }, data: { repeat: 'WEEKLY' } });
+    await proc.deliver(result.id, 1, 3);
+    expect((await prisma.campaign.findUniqueOrThrow({ where: { id: result.campaignId } })).status).toBe('RUNNING');
+  });
+
   it('marks the result ERROR on the final attempt when sending fails', async () => {
     const proc = new SendProcessor(prisma, render, new FakeMailer('fail'), new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any, { get: async () => ({ emailFooter: '' }) } as any);
     const { result } = await makeResult();

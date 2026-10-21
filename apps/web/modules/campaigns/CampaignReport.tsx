@@ -7,6 +7,7 @@ import { Button, Card, CardBody, CardHeader, Badge, statusTone, Funnel, StatTile
 import { PageHeader } from '@/components/shell/PageHeader';
 import { api } from '@/lib/api-client';
 import { parseUA } from '@/lib/ua';
+import { useDateFmt } from '@/lib/datetime';
 import { openRate, clickRate } from '@cg/shared';
 
 interface Campaign { id: string; name: string; status: string; type?: string; launchedAt: string | null; completedAt: string | null; publicEnabled: boolean; publicCode: string | null; repeat?: string | null; nextRunAt?: string | null; }
@@ -26,6 +27,7 @@ export function CampaignReport({ id }: { id: string }) {
   const results = useQuery<Result[]>({ queryKey: ['campaigns', id, 'results'], queryFn: () => api.get<Result[]>(`/campaigns/${id}/results`), refetchInterval: 15000 });
   const timeline = useQuery<Event[]>({ queryKey: ['campaigns', id, 'timeline'], queryFn: () => api.get<Event[]>(`/campaigns/${id}/timeline`), refetchInterval: 15000 });
   const email = campaign.data?.type === 'email';
+  const fmt = useDateFmt();
 
   const [filter, setFilter] = useState('');
   const [openResult, setOpenResult] = useState<Result | null>(null);
@@ -69,7 +71,7 @@ export function CampaignReport({ id }: { id: string }) {
   return (
     <div>
       <PageHeader title={cam.name}
-        subtitle={[cam.launchedAt ? `Launched ${new Date(cam.launchedAt).toLocaleString()}` : 'Not launched', cam.repeat && cam.repeat !== 'NONE' ? `Repeats ${cam.repeat.toLowerCase()}${cam.nextRunAt ? ` · next ${new Date(cam.nextRunAt).toLocaleDateString()}` : ''}` : ''].filter(Boolean).join(' · ')}
+        subtitle={[cam.launchedAt ? `Launched ${fmt.dateTime(cam.launchedAt)}` : 'Not launched', cam.repeat && cam.repeat !== 'NONE' ? `Repeats ${cam.repeat.toLowerCase()}${cam.nextRunAt ? ` · next ${fmt.date(cam.nextRunAt)}` : ''}` : ''].filter(Boolean).join(' · ')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone[cam.status] ?? 'neutral'}>{cam.status}</Badge>
@@ -136,7 +138,7 @@ export function CampaignReport({ id }: { id: string }) {
           <ol className="space-y-3">
             {(eventsByResult.get(openResult.id) ?? []).map((e) => (
               <li key={e.id} className="rounded-cg border border-line p-3">
-                <div className="flex items-center justify-between"><Badge tone={statusTone[e.type] ?? 'neutral'}>{e.type}</Badge><span className="text-xs text-muted">{new Date(e.createdAt).toLocaleString()}</span></div>
+                <div className="flex items-center justify-between"><Badge tone={statusTone[e.type] ?? 'neutral'}>{e.type}</Badge><span className="text-xs text-muted">{fmt.dateTime(e.createdAt)}</span></div>
                 {(e.ip || e.userAgent) && (() => { const ua = parseUA(e.userAgent); return (
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
                     {e.ip && <span className="font-mono">{e.ip}</span>}

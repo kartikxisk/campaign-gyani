@@ -41,9 +41,10 @@ describe('reports (e2e)', () => {
   it('returns dashboard totals and event counts', async () => {
     const res = await agent.get('/api/reports/dashboard');
     expect(res.body.totals.campaigns).toBeGreaterThanOrEqual(1);
-    expect(res.body.events.opened).toBeGreaterThanOrEqual(1);
-    expect(res.body.events.clicked).toBeGreaterThanOrEqual(1);
-    expect(typeof res.body.overallSuccessRate).toBe('number');
+    expect(res.body.phishing.opened).toBeGreaterThanOrEqual(1);
+    expect(res.body.phishing.clicked).toBeGreaterThanOrEqual(1);
+    expect(typeof res.body.phishing.successRate).toBe('number');
+    expect(typeof res.body.email.openRate).toBe('number');
   });
 
   it('exports results and events CSV with headers and one data row', async () => {

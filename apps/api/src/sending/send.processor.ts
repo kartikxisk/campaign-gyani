@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ResultStatus } from '@prisma/client';
+import { CampaignStatus, ResultStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
 import { Circuit, CircuitOpenError } from './circuit';
@@ -104,6 +104,7 @@ export class SendProcessor {
     } catch (dbErr) {
       this.logger.error(`Message sent for ${resultId} but recording SENT failed: ${(dbErr as Error).message}`);
     }
+    await this.advanceCampaignState(result.campaignId);
   }
 
   private async resolveAttachments(raw: unknown): Promise<{ filename: string; path: string }[]> {
@@ -122,6 +123,21 @@ export class SendProcessor {
 
   private async fail(resultId: string, reason: string, attempt: number, maxAttempts: number): Promise<void> {
     this.logger.error(`Giving up on ${resultId} after ${attempt}/${maxAttempts}: ${reason}`);
-    await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.ERROR, error: reason } });
+    const r = await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.ERROR, error: reason } });
+    await this.advanceCampaignState(r.campaignId);
+  }
+
+  /** Flip SCHEDULED→RUNNING on first send, and RUNNING→COMPLETE once nothing is left to send. */
+  private async advanceCampaignState(campaignId: string): Promise<void> {
+    await this.prisma.campaign.updateMany({ where: { id: campaignId, status: CampaignStatus.SCHEDULED }, data: { status: CampaignStatus.RUNNING } });
+    const pending = await this.prisma.campaignResult.count({ where: { campaignId, status: { in: [ResultStatus.SCHEDULED, ResultStatus.SENDING] } } });
+    if (pending > 0) return;
+    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId }, select: { repeat: true } });
+    // Recurring series parents keep running so they can spawn future runs.
+    if (campaign && campaign.repeat && campaign.repeat !== 'NONE') return;
+    await this.prisma.campaign.updateMany({
+      where: { id: campaignId, status: { in: [CampaignStatus.RUNNING, CampaignStatus.SCHEDULED] } },
+      data: { status: CampaignStatus.COMPLETE, completedAt: new Date() },
+    });
   }
 }
