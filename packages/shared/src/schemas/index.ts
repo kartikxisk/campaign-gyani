@@ -71,6 +71,7 @@ export type TargetGroupDto = z.infer<typeof targetGroupSchema>;
 export const campaignCreateSchema = z
   .object({
     name: nonEmpty('Name'),
+    type: z.enum(['phishing', 'email']).optional(),
     sendByDate: z.string().datetime(),
     templateIds: z.array(z.string()).min(1, 'Select at least one template'),
     pageId: z.string().optional(),

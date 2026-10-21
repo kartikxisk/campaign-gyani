@@ -36,7 +36,7 @@ describe('SendProcessor.deliver', () => {
   });
   afterAll(async () => { await prisma.$disconnect(); });
 
-  async function makeResult(withAttachment = false) {
+  async function makeResult(withAttachment = false, type = 'phishing') {
     let attachments: { assetId: string; filename: string }[] = [];
     if (withAttachment) {
       const asset = await prisma.asset.create({ data: { filename: 'abc.pdf', path: '/tmp/abc.pdf', mimetype: 'application/pdf', size: 10, kind: 'attachment' } });
@@ -45,14 +45,14 @@ describe('SendProcessor.deliver', () => {
     const tpl = await prisma.emailTemplate.create({ data: { name: 'T', envelopeSender: 'IT <it@b.com>', subject: 'Hi {{.FirstName}}', htmlBody: '<p>Hi {{.FirstName}} <a href="https://bank.test">go</a></p>', attachments } });
     const smtp = await prisma.sendingProfile.create({ data: { name: 'P', provider: 'custom', fromAddress: 'it@b.com', host: 'smtp.sender.test', port: 587, username: 'u', passwordEnc: 'e' } });
     const page = await prisma.landingPage.create({ data: { name: 'L', html: '<form></form>', redirectUrl: 'https://x.com' } });
-    const campaign = await prisma.campaign.create({ data: { name: 'C', status: 'RUNNING', sendByDate: new Date(), sendingProfileId: smtp.id, landingPageId: page.id, templates: { create: [{ templateId: tpl.id }] } } });
+    const campaign = await prisma.campaign.create({ data: { name: 'C', status: 'RUNNING', type, sendByDate: new Date(), sendingProfileId: smtp.id, landingPageId: page.id, templates: { create: [{ templateId: tpl.id }] } } });
     const result = await prisma.campaignResult.create({ data: { campaignId: campaign.id, templateId: tpl.id, email: 'ada@corp.com', firstName: 'Ada', rid: 'RID1' } });
     return { result, smtp };
   }
 
   it('sends and marks the result SENT with a SENT event', async () => {
     const mailer = new FakeMailer('ok');
-    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult();
     await proc.deliver(result.id, 1, 3);
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id }, include: { events: true } });
@@ -64,7 +64,7 @@ describe('SendProcessor.deliver', () => {
   });
 
   it('marks the result ERROR on the final attempt when sending fails', async () => {
-    const proc = new SendProcessor(prisma, render, new FakeMailer('fail'), new Circuit(), { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, new FakeMailer('fail'), new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult();
     await proc.deliver(result.id, 3, 3); // final attempt
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
@@ -73,7 +73,7 @@ describe('SendProcessor.deliver', () => {
   });
 
   it('rethrows (for retry) on a non-final failed attempt without marking ERROR', async () => {
-    const proc = new SendProcessor(prisma, render, new FakeMailer('fail'), new Circuit(), { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, new FakeMailer('fail'), new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult();
     await expect(proc.deliver(result.id, 1, 3)).rejects.toThrow();
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
@@ -82,7 +82,7 @@ describe('SendProcessor.deliver', () => {
 
   it('includes the template attachments in the sent message', async () => {
     const mailer = new FakeMailer('ok');
-    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult(true);
     await proc.deliver(result.id, 1, 3);
     expect(mailer.sent[0]?.attachments).toEqual([{ filename: 'invoice.pdf', path: '/tmp/abc.pdf' }]);
@@ -90,7 +90,7 @@ describe('SendProcessor.deliver', () => {
 
   it('does not send for a completed campaign', async () => {
     const mailer = new FakeMailer('ok');
-    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult();
     await prisma.campaign.updateMany({ data: { status: 'COMPLETE' } });
     await proc.deliver(result.id, 1, 3);
@@ -101,8 +101,8 @@ describe('SendProcessor.deliver', () => {
 
   it('does not send to an address suppressed after launch (email mode)', async () => {
     const mailer = new FakeMailer('ok');
-    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { getMode: async () => 'email' } as any, { suppressedSet: async () => new Set(['ada@corp.com']) } as any, { enqueue: async () => undefined } as any);
-    const { result } = await makeResult();
+    const proc = new SendProcessor(prisma, render, mailer, new Circuit(), { suppressedSet: async () => new Set(['ada@corp.com']) } as any, { enqueue: async () => undefined } as any);
+    const { result } = await makeResult(false, 'email');
     await proc.deliver(result.id, 1, 3);
     expect(mailer.sent).toHaveLength(0);
     const after = await prisma.campaignResult.findUniqueOrThrow({ where: { id: result.id } });
@@ -114,7 +114,7 @@ describe('SendProcessor.deliver', () => {
     const circuit = new Circuit({ threshold: 1, cooldownMs: 60_000 });
     circuit.recordFailure('smtp.sender.test');
     const mailer = new FakeMailer('ok');
-    const proc = new SendProcessor(prisma, render, mailer, circuit, { getMode: async () => 'phishing' } as any, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
+    const proc = new SendProcessor(prisma, render, mailer, circuit, { suppressedSet: async () => new Set<string>() } as any, { enqueue: async () => undefined } as any);
     const { result } = await makeResult();
     await expect(proc.deliver(result.id, 1, 3)).rejects.toThrow();
     expect(mailer.sent).toHaveLength(0);

@@ -5,7 +5,6 @@ import { advance, type Repeat, type CampaignCreateDto } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseListQuery, type ListParamsInput, type ListResult } from '../common/list-query';
 import { SEND_QUEUE, type SendQueue } from '../sending/send-queue.port';
-import { SettingsService } from '../settings/settings.service';
 import { SuppressionService } from '../suppression/suppression.service';
 
 function token(bytes = 24): string {
@@ -17,18 +16,18 @@ export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(SEND_QUEUE) private readonly queue: SendQueue,
-    private readonly settings: SettingsService,
     private readonly suppression: SuppressionService,
   ) {}
 
   async create(dto: CampaignCreateDto): Promise<Campaign> {
-    const mode = await this.settings.getMode();
-    if (mode !== 'email' && !dto.pageId) {
+    const type = dto.type ?? 'phishing';
+    if (type !== 'email' && !dto.pageId) {
       throw new BadRequestException('A landing page is required for a phishing campaign');
     }
     return this.prisma.campaign.create({
       data: {
         name: dto.name,
+        type,
         sendByDate: new Date(dto.sendByDate),
         landingPageId: dto.pageId ?? null,
         sendingProfileId: dto.smtpId,
@@ -47,8 +46,8 @@ export class CampaignsService {
     if (existing.status !== CampaignStatus.DRAFT) {
       throw new ConflictException('Only a draft campaign can be edited');
     }
-    const mode = await this.settings.getMode();
-    if (mode !== 'email' && !dto.pageId) {
+    const type = dto.type ?? 'phishing';
+    if (type !== 'email' && !dto.pageId) {
       throw new BadRequestException('A landing page is required for a phishing campaign');
     }
     return this.prisma.$transaction(async (tx) => {
@@ -58,6 +57,7 @@ export class CampaignsService {
         where: { id },
         data: {
           name: dto.name,
+          type,
           sendByDate: new Date(dto.sendByDate),
           landingPageId: dto.pageId ?? null,
           sendingProfileId: dto.smtpId,
@@ -162,7 +162,7 @@ export class CampaignsService {
       const byEmail = new Map<string, (typeof targets)[number]>();
       for (const t of targets) if (!byEmail.has(t.email.toLowerCase())) byEmail.set(t.email.toLowerCase(), t);
       // Email mode honors the suppression list — unsubscribed recipients are skipped.
-      if ((await this.settings.getMode()) === 'email') {
+      if (campaign.type === 'email') {
         const suppressed = await this.suppression.suppressedSet([...byEmail.keys()]);
         for (const email of suppressed) byEmail.delete(email);
       }

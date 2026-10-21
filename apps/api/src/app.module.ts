@@ -16,8 +16,8 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { ReportsModule } from './reports/reports.module';
 import { ImportModule } from './import/import.module';
-import { SettingsModule } from './settings/settings.module';
 import { SuppressionModule } from './suppression/suppression.module';
+import { ConfigStoreModule } from './config-store/config-store.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
@@ -37,8 +37,8 @@ import { CsrfGuard } from './auth/csrf.guard';
     TrackingModule,
     ReportsModule,
     ImportModule,
-    SettingsModule,
     SuppressionModule,
+    ConfigStoreModule,
     WebhooksModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     ScheduleModule.forRoot(),

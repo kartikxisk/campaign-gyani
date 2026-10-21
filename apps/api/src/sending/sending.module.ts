@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { SettingsModule } from '../settings/settings.module';
 import { SuppressionModule } from '../suppression/suppression.module';
 import { Circuit } from './circuit';
 import { NodemailerMailer, MAILER } from './mailer';
@@ -9,7 +8,7 @@ import { SendWorker } from './send.worker';
 import { SEND_QUEUE } from './send-queue.port';
 
 @Module({
-  imports: [SettingsModule, SuppressionModule],
+  imports: [SuppressionModule],
   providers: [
     { provide: MAILER, useClass: NodemailerMailer },
     { provide: Circuit, useFactory: () => new Circuit() },

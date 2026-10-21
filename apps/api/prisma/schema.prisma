@@ -129,6 +129,7 @@ model Campaign {
   shuffleTemplates Boolean            @default(false)
   publicCode       String?            @unique
   publicEnabled    Boolean            @default(false)
+  type             String             @default("phishing")
   repeat           String?
   nextRunAt        DateTime?
   parentId         String?
@@ -211,6 +212,7 @@ model AppSetting {
   id            String    @id @default("app")
   mode          String?
   webhookSecret String?
+  config        Json?
   setAt         DateTime?
 
   @@map("app_setting")

@@ -3,7 +3,6 @@ import { Prisma, ResultStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RenderService } from '../render/render.service';
 import { hmacSign, safeStringEqual } from '../auth/crypto.util';
-import { SettingsService } from '../settings/settings.service';
 import { SuppressionService } from '../suppression/suppression.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
@@ -22,7 +21,6 @@ export class TrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly render: RenderService,
-    private readonly settings: SettingsService,
     private readonly suppression: SuppressionService,
     @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>,
   ) {}
@@ -42,15 +40,14 @@ export class TrackingService {
   }
 
   async recordClick(rid: string, meta: ClientMeta, originalUrl?: string, sig?: string): Promise<string> {
-    const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
+    const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { select: { type: true } } } });
     if (!result) throw new NotFoundException();
     await this.prisma.campaignEvent.create({ data: { resultId: result.id, type: 'CLICKED', ip: meta.ip, userAgent: meta.userAgent } });
     await this.bump(result.id, result.status, ResultStatus.CLICKED);
-    // Email mode has no landing page: send the recipient to the real URL the
-    // author linked — but only if its signature matches, so the endpoint can't
-    // be used as an open redirect. Phishing mode routes to the landing page.
-    const mode = await this.settings.getMode();
-    if (mode === 'email') {
+    // Email campaigns have no landing page: send the recipient to the real URL
+    // the author linked — but only if its signature matches, so the endpoint
+    // can't be used as an open redirect. Phishing routes to the landing page.
+    if (result.campaign.type === 'email') {
       if (
         originalUrl &&
         sig &&
@@ -65,9 +62,8 @@ export class TrackingService {
   }
 
   async getLandingView(rid: string): Promise<{ html: string }> {
-    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
     const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { include: { landingPage: true } } } });
-    if (!result || !result.campaign.landingPage) throw new NotFoundException();
+    if (!result || result.campaign.type === 'email' || !result.campaign.landingPage) throw new NotFoundException();
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position };
     const filled = this.render.renderTemplate(result.campaign.landingPage.html, ctx);
     const action = `${this.env.PUBLIC_BASE_URL}/api/t/s/${rid}`;
@@ -80,9 +76,8 @@ export class TrackingService {
   }
 
   async recordSubmit(rid: string, body: Record<string, unknown>, meta: ClientMeta): Promise<string> {
-    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
     const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { include: { landingPage: true } } } });
-    if (!result || !result.campaign.landingPage) throw new NotFoundException();
+    if (!result || result.campaign.type === 'email' || !result.campaign.landingPage) throw new NotFoundException();
     const lp = result.campaign.landingPage;
 
     let captured: Record<string, unknown> | undefined;
@@ -111,9 +106,8 @@ export class TrackingService {
   }
 
   async recordReport(rid: string, meta: ClientMeta): Promise<void> {
-    if ((await this.settings.getMode()) === 'email') throw new NotFoundException();
-    const result = await this.prisma.campaignResult.findUnique({ where: { rid } });
-    if (!result) throw new NotFoundException();
+    const result = await this.prisma.campaignResult.findUnique({ where: { rid }, include: { campaign: { select: { type: true } } } });
+    if (!result || result.campaign.type === 'email') throw new NotFoundException();
     await this.prisma.campaignEvent.create({ data: { resultId: result.id, type: 'REPORTED', ip: meta.ip, userAgent: meta.userAgent } });
     await this.prisma.campaignResult.update({ where: { id: result.id }, data: { reported: true } });
   }

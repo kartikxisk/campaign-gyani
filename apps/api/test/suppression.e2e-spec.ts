@@ -17,15 +17,12 @@ describe('suppression + unsubscribe (email mode, e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    await prisma.appSetting.deleteMany();
     await prisma.suppression.deleteMany();
-    await prisma.appSetting.create({ data: { id: 'app', mode: 'email', setAt: new Date() } });
     agent = request.agent(app.getHttpServer());
     await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
     csrf = (await agent.get('/api/auth/csrf')).body.csrfToken as string;
   });
   afterAll(async () => {
-    await prisma.appSetting.deleteMany();
     await prisma.suppression.deleteMany();
     await app?.close();
   });
@@ -51,7 +48,7 @@ describe('suppression + unsubscribe (email mode, e2e)', () => {
     await agent.post('/api/suppressions').set('x-csrf-token', csrf).send({ email: 'drop@corp.com' });
 
     const campaign = (await agent.post('/api/campaigns').set('x-csrf-token', csrf).send({
-      name: 'Email send', sendByDate: new Date(Date.now() - 1000).toISOString(),
+      name: 'Email send', type: 'email', sendByDate: new Date(Date.now() - 1000).toISOString(),
       templateIds: [tpl.id], smtpId: smtp.id, groupIds: [group.id],
     })).body;
     expect(campaign.status).toBe('DRAFT'); // no landing required in email mode

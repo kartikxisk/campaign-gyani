@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CampaignStatus, ResultStatus } from '@prisma/client';
 import { successRate } from '@cg/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { SettingsService } from '../settings/settings.service';
 
 const SENT_RANK = [ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED];
 
@@ -17,10 +16,7 @@ export interface CampaignCounts {
 
 @Injectable()
 export class ReportsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly settings: SettingsService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async counts(campaignId: string): Promise<CampaignCounts> {
     const [sent, opened, clicked, submitted, reported] = await this.prisma.$transaction([
@@ -104,7 +100,7 @@ export class ReportsService {
       launchedAt: campaign.launchedAt,
       completedAt: campaign.completedAt,
       sendByDate: campaign.sendByDate,
-      mode: (await this.settings.getMode()) ?? 'phishing',
+      mode: campaign.type,
       counts,
     };
   }

@@ -5,7 +5,6 @@ import { RenderService } from '../render/render.service';
 import { Circuit, CircuitOpenError } from './circuit';
 import { MAILER, type Mailer } from './mailer';
 import { SEND_QUEUE, type SendQueue } from './send-queue.port';
-import { SettingsService } from '../settings/settings.service';
 import { SuppressionService } from '../suppression/suppression.service';
 
 const TERMINAL = new Set<string>([ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED, ResultStatus.REPORTED]);
@@ -19,7 +18,6 @@ export class SendProcessor {
     private readonly render: RenderService,
     @Inject(MAILER) private readonly mailer: Mailer,
     private readonly circuit: Circuit,
-    private readonly settings: SettingsService,
     private readonly suppression: SuppressionService,
     @Inject(SEND_QUEUE) private readonly queue: SendQueue,
   ) {}
@@ -38,7 +36,7 @@ export class SendProcessor {
     }
     // Don't send for a campaign that is completed, still draft, or deleted.
     if (result.campaign.status !== 'SCHEDULED' && result.campaign.status !== 'RUNNING') return;
-    const mode = await this.settings.getMode();
+    const mode = result.campaign.type;
     // Re-check suppression at send time: a recipient may have unsubscribed after
     // launch while this job sat in the queue.
     if (mode === 'email') {

@@ -8,7 +8,6 @@ describe('RecurrenceService.runDue', () => {
   const campaigns = new CampaignsService(
     prisma,
     { enqueue: async () => undefined } as any,
-    { getMode: async () => 'phishing' } as any,
     { suppressedSet: async () => new Set<string>() } as any,
   );
   const recurrence = new RecurrenceService(prisma, campaigns);
