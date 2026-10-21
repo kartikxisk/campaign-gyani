@@ -7,33 +7,34 @@ vi.mock('@/lib/api-client', () => ({ api: { post: (...a: unknown[]) => post(...a
 
 import { LoginForm } from '../LoginForm';
 
-describe('LoginForm', () => {
+describe('LoginForm (two-step)', () => {
   beforeEach(() => post.mockReset());
 
-  it('blocks submit and shows validation when fields are empty', async () => {
-    const onSuccess = vi.fn();
-    render(<LoginForm onSuccess={onSuccess} />);
-    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(post).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
+  it('blocks advancing with an invalid email', async () => {
+    render(<LoginForm onSuccess={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
   });
 
-  it('submits valid credentials and calls onSuccess', async () => {
+  it('signs in through email then password', async () => {
     post.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
     const onSuccess = vi.fn();
     render(<LoginForm onSuccess={onSuccess} />);
-    await userEvent.type(screen.getByLabelText('Email'), 'a@b.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'secret12');
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'secret12');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/auth/login', { email: 'a@b.com', password: 'secret12' }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
-  it('shows a server error when login fails', async () => {
+  it('shows an error when the password is wrong', async () => {
     post.mockRejectedValueOnce(new Error('bad'));
     render(<LoginForm onSuccess={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText('Email'), 'a@b.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'secret12');
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'secret12');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
