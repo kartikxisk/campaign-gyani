@@ -30,7 +30,7 @@ export default function LoginPage() {
           <div className="mt-6 h-[3px] w-32 rounded-full"
             style={{ background: 'linear-gradient(90deg, var(--cg-sent), var(--cg-opened), var(--cg-clicked), var(--cg-submitted), var(--cg-reported))' }} />
         </div>
-        <div className="absolute bottom-12 left-12 text-xs text-deck-muted/70">Authorized security testing only.</div>
+        <div className="absolute bottom-12 left-12 text-xs text-deck-muted/70">Made with ❤️, Made in India.</div>
       </aside>
 
       {/* Sign-in */}

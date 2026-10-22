@@ -13,3 +13,6 @@ uploads/
 # prisma
 .env.test
 uploads-test/
+
+
+.playwright-mcp
