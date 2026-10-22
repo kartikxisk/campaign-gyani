@@ -8,9 +8,10 @@ export default function LoginPage() {
   const router = useRouter();
   const { brandName, logoUrl } = useConfig();
 
+  // Height-only so wide logos show at their natural aspect (not cropped square).
   const Mark = ({ size }: { size: number }) =>
     logoUrl
-      ? <img src={logoUrl} alt={brandName} style={{ height: size, width: size }} className="rounded-cg-sm object-contain" />
+      ? <img src={logoUrl} alt={brandName} style={{ height: size }} className="w-auto max-w-[260px] object-contain" />
       : null;
 
   return (
@@ -22,7 +23,7 @@ export default function LoginPage() {
           <div className="cg-aurora cg-aurora-b" style={{ bottom: '-14%', left: '18%', width: '55%', height: '55%', background: 'radial-gradient(circle, var(--cg-submitted), transparent 70%)' }} />
           <div className="cg-aurora cg-aurora-c" style={{ top: '22%', right: '-12%', width: '52%', height: '52%', background: 'radial-gradient(circle, var(--cg-clicked), transparent 70%)' }} />
         </div>
-        {logoUrl && <div className="absolute left-12 top-12"><Mark size={40} /></div>}
+        {logoUrl && <div className="absolute left-12 top-12"><Mark size={56} /></div>}
         <div className="relative max-w-sm">
           <PhishMark className="mb-8 h-36 w-auto" />
           <h2 className="font-display text-[34px] font-semibold leading-[1.15] text-deck-ink">Run the drill. Watch who takes the bait.</h2>
@@ -36,7 +37,7 @@ export default function LoginPage() {
       {/* Sign-in */}
       <section className="flex items-center justify-center bg-surface px-6 py-12">
         <div className="cg-signin-rise w-full max-w-[360px]">
-          {logoUrl && <div className="mb-8 lg:hidden"><Mark size={36} /></div>}
+          {logoUrl && <div className="mb-8 lg:hidden"><Mark size={48} /></div>}
           <LoginForm onSuccess={() => router.replace('/')} />
         </div>
       </section>
