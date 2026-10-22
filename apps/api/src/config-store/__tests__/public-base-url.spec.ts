@@ -1,22 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { ConfigStoreService } from '../config.service';
 
-function svc(stored: Record<string, unknown> | null, envUrl: string) {
+function svc(stored: Record<string, unknown> | null) {
   const prisma = { appSetting: { findUnique: async () => (stored ? { config: stored } : null) } };
-  return new ConfigStoreService(prisma as any, { PUBLIC_BASE_URL: envUrl } as any);
+  return new ConfigStoreService(prisma as any);
 }
 
 describe('publicBaseUrl resolver', () => {
-  it('falls back to the env default when no override is set', async () => {
-    expect(await svc(null, 'https://env.example.com').publicBaseUrl()).toBe('https://env.example.com');
-    expect(await svc({ publicBaseUrl: '' }, 'https://env.example.com').publicBaseUrl()).toBe('https://env.example.com');
+  it('throws when it is not configured', async () => {
+    await expect(svc(null).publicBaseUrl()).rejects.toThrow(/not configured/i);
+    await expect(svc({ publicBaseUrl: '' }).publicBaseUrl()).rejects.toThrow(/not configured/i);
+    await expect(svc({ publicBaseUrl: '   ' }).publicBaseUrl()).rejects.toThrow(/not configured/i);
   });
 
-  it('uses the admin override when set', async () => {
-    expect(await svc({ publicBaseUrl: 'https://sim.yourco.com' }, 'https://env.example.com').publicBaseUrl()).toBe('https://sim.yourco.com');
-  });
-
-  it('strips a trailing slash', async () => {
-    expect(await svc({ publicBaseUrl: 'https://sim.yourco.com/' }, 'https://env.example.com').publicBaseUrl()).toBe('https://sim.yourco.com');
+  it('returns the admin-configured URL without a trailing slash', async () => {
+    expect(await svc({ publicBaseUrl: 'https://sim.yourco.com' }).publicBaseUrl()).toBe('https://sim.yourco.com');
+    expect(await svc({ publicBaseUrl: 'https://sim.yourco.com/' }).publicBaseUrl()).toBe('https://sim.yourco.com');
   });
 });

@@ -6,7 +6,6 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(8080),
   SESSION_SECRET: z.string().min(16),
   SMTP_ENC_KEY: z.string().length(32, 'SMTP_ENC_KEY must be exactly 32 chars (AES-256)'),
-  PUBLIC_BASE_URL: z.string().url(),
   WEB_ORIGIN: z.string().url(),
   ADMIN_EMAIL: z.string().email(),
   ADMIN_INITIAL_PASSWORD: z.string().min(6),

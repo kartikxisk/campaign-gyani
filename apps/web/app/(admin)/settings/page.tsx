@@ -61,7 +61,7 @@ export default function SettingsPage() {
             </div>
           </Field>
           <Field label="Timezone" hint="IANA name, e.g. America/New_York"><Input value={cfg.timezone} onChange={(e) => setCfg({ ...cfg, timezone: e.target.value })} /></Field>
-          <div className="md:col-span-2"><Field label="Public base URL" hint="Where victim-facing links (tracking, landing pages) resolve. Blank uses the PUBLIC_BASE_URL env default."><Input value={cfg.publicBaseUrl} onChange={(e) => setCfg({ ...cfg, publicBaseUrl: e.target.value })} placeholder="https://sim.yourco.com" /></Field></div>
+          <div className="md:col-span-2"><Field label="Public base URL" hint="Required. Where victim-facing links (tracking, landing pages, unsubscribe) resolve. Sending fails until this is set."><Input value={cfg.publicBaseUrl} onChange={(e) => setCfg({ ...cfg, publicBaseUrl: e.target.value })} placeholder="https://sim.yourco.com" /></Field></div>
           <ImageField label="Logo" hint="PNG, JPEG, GIF or WebP. Shown in the sidebar and on the sign-in page."
             url={config.logoUrl} onChange={(url) => setImage('logoUrl', url)} />
           <ImageField label="Favicon" hint="Square PNG or ICO, 32×32 or larger. Shown in the browser tab."

@@ -68,7 +68,14 @@ export class SendProcessor {
 
     await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.SENDING } });
 
-    const base = await this.config.publicBaseUrl();
+    let base: string;
+    try {
+      base = await this.config.publicBaseUrl();
+    } catch (e) {
+      // Not retryable — the operator must configure the URL. Mark it and stop.
+      await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.ERROR, error: (e as Error).message } });
+      return;
+    }
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position, ExternalURL: template.externalUrl ?? '' };
     let html = this.render.renderForRecipient(base, template.htmlBody, ctx, result.rid);
     const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(base, result.rid) });

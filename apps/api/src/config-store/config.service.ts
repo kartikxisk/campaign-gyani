@@ -1,7 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ENV } from '../config/config.module';
-import type { Env } from '../config/env';
 
 export interface AppConfig {
   brandName: string;
@@ -11,7 +9,7 @@ export interface AppConfig {
   timezone: string;
   emailFooter: string;
   // Base URL victim-facing links are built from (tracking, landing, assets).
-  // Empty means "use the PUBLIC_BASE_URL env default".
+  // Must be set by an admin before sending or sharing links.
   publicBaseUrl: string;
 }
 
@@ -27,15 +25,13 @@ const DEFAULTS: AppConfig = {
 
 @Injectable()
 export class ConfigStoreService {
-  constructor(
-    private readonly prisma: PrismaService,
-    @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL'>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  /** The effective public base URL: the admin override if set, else the env default. No trailing slash. */
+  /** The admin-configured public base URL (no trailing slash). Throws if unset. */
   async publicBaseUrl(): Promise<string> {
-    const override = (await this.get()).publicBaseUrl.trim();
-    return (override || this.env.PUBLIC_BASE_URL).replace(/\/+$/, '');
+    const url = (await this.get()).publicBaseUrl.trim();
+    if (!url) throw new BadRequestException('Public base URL is not configured. Set it in Settings before sending or sharing links.');
+    return url.replace(/\/+$/, '');
   }
 
   async get(): Promise<AppConfig> {

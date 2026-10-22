@@ -47,7 +47,7 @@ export async function configureApp(app: INestApplication, env: Env): Promise<voi
       cookie: {
         httpOnly: true,
         sameSite: 'lax',
-        secure: env.PUBLIC_BASE_URL.startsWith('https'),
+        secure: env.WEB_ORIGIN.startsWith('https'),
         maxAge: 1000 * 60 * 60 * 12,
       },
     }),
