@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
           <main className="flex-1 bg-surface px-4 py-6 md:rounded-tl-[20px] md:px-8 md:py-8">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+            <div className="mx-auto w-full">{children}</div>
           </main>
         </div>
       </div>
