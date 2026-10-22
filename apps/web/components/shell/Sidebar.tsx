@@ -46,9 +46,8 @@ export function Brand() {
   const { brandName, logoUrl } = useConfig();
   if (!logoUrl) return <div aria-hidden className="h-16 shrink-0" />;
   return (
-    <Link href="/" className="flex shrink-0 items-center gap-2.5 px-5 py-4">
-      <img src={logoUrl} alt="" className="h-8 w-8 rounded-cg-sm object-contain" />
-      <span className="font-display font-semibold text-deck-ink">{brandName}</span>
+    <Link href="/" className="flex shrink-0 items-center px-5 py-4">
+      <img src={logoUrl} alt={brandName} className="h-9 w-auto max-w-[160px] object-contain" />
     </Link>
   );
 }
