@@ -1,10 +1,27 @@
 # Campaign-Gyani
 
-A standalone, single-tenant **security-awareness (phishing simulation) platform**.
-One organization runs simulated phishing campaigns against its own people, tracks
-who opens / clicks / submits, and reports susceptibility to target training.
+A standalone, single-tenant **campaign platform for phishing simulations and
+email campaigns** — purely sending and stats. One organization runs simulated
+phishing or plain email campaigns against its own people and tracks who opens /
+clicks / submits / reports, with funnels and per-recipient reporting. Each
+campaign is phishing **or** email (`campaign.type`); the console adapts to a
+phishing/email view mode you pick in the topbar (remembered per browser).
 
 > For authorized security-awareness testing only.
+
+## Features
+
+- Campaigns (phishing or email): wizard, drafts, edit, pause/resume, recurring
+  (daily/weekly/monthly), scales to ~100k recipients per launch.
+- Templates (HTML + text, merge tokens, attachments, import-from-email), landing
+  pages (clone-from-URL, capture flags), sending profiles (SMTP, rate-limited),
+  target groups + CSV import, suppressions + unsubscribe + bounce webhook.
+- **AI template generation** — connect Claude, ChatGPT, or Gemini in Settings
+  (provider, model, API key stored encrypted) and draft an email from a prompt.
+- **Deliverability pre-flight** — check a sending domain's SPF / DKIM / DMARC and
+  score email content for spam signals before you launch.
+- Reports: dashboard funnel + trend, per-campaign funnel, per-recipient timeline,
+  streamed CSV exports, optional public read-only report link (`/r/:code`).
 
 ## Stack
 
@@ -23,17 +40,22 @@ docker compose up --build
 - Admin console: http://localhost:3000
 - API: http://localhost:8080/api/health
 - First boot runs Prisma migrations and seeds the admin from `ADMIN_EMAIL` /
-  `ADMIN_INITIAL_PASSWORD`. Change the password in **Settings** after first login.
+  `ADMIN_INITIAL_PASSWORD`. After first login, change the password and set the
+  **Public base URL** in **Settings** (required before launching a campaign).
 
 ## Local development
 
 ```bash
-pnpm install
-# Postgres + Redis (any instance); point apps/api/.env at them, then:
-pnpm -F @cg/api prisma migrate dev
-pnpm -F @cg/api db:seed
+pnpm dev:setup      # or: npm run dev:setup
 pnpm dev            # turbo runs api (:8080) + web (:3000)
 ```
+
+`dev:setup` asks for the admin email, password and URLs, then writes
+`apps/api/.env` (and `.env.test` if missing), starts the backing services from
+`docker-compose.dev.yml` — Postgres :5490, Redis :6490, Mailpit SMTP :1025 with
+its inbox at http://localhost:8025 — applies migrations to the dev and test
+databases, and creates or updates the admin. Re-running it is safe: current
+`.env` values become the defaults and existing secrets are kept.
 
 Run tests with `pnpm test`.
 
@@ -58,8 +80,10 @@ Run tests with `pnpm test`.
    per-recipient timeline, CSV exports, and an optional public read-only report
    link (`/r/:code`) that exposes no identifying data.
 
-`PUBLIC_BASE_URL` is where victims reach landing pages and tracking; `WEB_ORIGIN`
-is the admin console origin (CSRF/CORS are anchored to it).
+The **public base URL** — where recipients reach landing pages and tracking — is
+an admin setting (**Settings → Public base URL**), not an env var. Sending and
+link generation fail with a clear "configure it first" error until it is set.
+`WEB_ORIGIN` is the admin console origin (CSRF/CORS are anchored to it).
 
 ## Security notes
 
