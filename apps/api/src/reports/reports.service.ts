@@ -72,26 +72,46 @@ export class ReportsService {
     };
   }
 
-  async resultsCsv(campaignId: string): Promise<string> {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+  private async assertCampaign(campaignId: string): Promise<void> {
+    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId }, select: { id: true } });
     if (!campaign) throw new NotFoundException('Campaign not found');
-    const rows = await this.prisma.campaignResult.findMany({ where: { campaignId }, orderBy: { createdAt: 'asc' } });
-    const header = ['Email', 'First Name', 'Last Name', 'Position', 'Status', 'Reported', 'Error'];
-    const lines = rows.map((r) => [r.email, r.firstName, r.lastName, r.position, r.status, r.reported ? 'Yes' : 'No', r.error ?? ''].map(csvCell).join(','));
-    return [header.join(','), ...lines].join('\n');
   }
 
-  async eventsCsv(campaignId: string): Promise<string> {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
-    if (!campaign) throw new NotFoundException('Campaign not found');
-    const events = await this.prisma.campaignEvent.findMany({
-      where: { result: { campaignId } },
-      include: { result: { select: { email: true } } },
-      orderBy: { createdAt: 'asc' },
-    });
-    const header = ['Email', 'Type', 'IP', 'User Agent', 'Timestamp'];
-    const lines = events.map((e) => [e.result.email, e.type, e.ip ?? '', e.userAgent ?? '', e.createdAt.toISOString()].map(csvCell).join(','));
-    return [header.join(','), ...lines].join('\n');
+  // Streamed in id-keyed batches so a 100k-recipient export never builds the
+  // whole file in memory.
+  async *resultsCsvRows(campaignId: string): AsyncGenerator<string> {
+    await this.assertCampaign(campaignId);
+    yield ['Email', 'First Name', 'Last Name', 'Position', 'Status', 'Reported', 'Error'].join(',') + '\n';
+    const BATCH = 1000;
+    let cursor: string | undefined;
+    for (;;) {
+      const rows = await this.prisma.campaignResult.findMany({
+        where: { campaignId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: BATCH,
+        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      });
+      if (rows.length === 0) break;
+      yield rows.map((r) => [r.email, r.firstName, r.lastName, r.position, r.status, r.reported ? 'Yes' : 'No', r.error ?? ''].map(csvCell).join(',')).join('\n') + '\n';
+      cursor = rows[rows.length - 1]!.id;
+      if (rows.length < BATCH) break;
+    }
+  }
+
+  async *eventsCsvRows(campaignId: string): AsyncGenerator<string> {
+    await this.assertCampaign(campaignId);
+    yield ['Email', 'Type', 'IP', 'User Agent', 'Timestamp'].join(',') + '\n';
+    const BATCH = 1000;
+    let cursor: string | undefined;
+    for (;;) {
+      const events = await this.prisma.campaignEvent.findMany({
+        where: { result: { campaignId } }, include: { result: { select: { email: true } } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: BATCH,
+        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      });
+      if (events.length === 0) break;
+      yield events.map((e) => [e.result.email, e.type, e.ip ?? '', e.userAgent ?? '', e.createdAt.toISOString()].map(csvCell).join(',')).join('\n') + '\n';
+      cursor = events[events.length - 1]!.id;
+      if (events.length < BATCH) break;
+    }
   }
 
   async campaignsCsv(): Promise<string> {

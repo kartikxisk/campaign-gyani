@@ -104,7 +104,9 @@ export class CampaignsService {
       this.prisma.campaign.findMany({ where: scoped, orderBy, skip, take }),
       this.prisma.campaign.count({ where: scoped }),
     ]);
-    const withCounts = await Promise.all(rows.map(async (c) => ({ ...c, counts: await this.counts(c.id) })));
+    // One batched read for the whole page instead of 5 counts per campaign.
+    const counts = await this.countsMany(rows.map((r) => r.id));
+    const withCounts = rows.map((c) => ({ ...c, counts: counts.get(c.id)! }));
     return { rows: withCounts, total, page, limit };
   }
 
@@ -140,6 +142,29 @@ export class CampaignsService {
       this.prisma.campaignResult.count({ where: { campaignId, reported: true } }),
     ]);
     return { SENT: sent, OPENED: opened, CLICKED: clicked, SUBMITTED: submitted, REPORTED: reported };
+  }
+
+  // Same five metrics as counts(), but for many campaigns in five grouped
+  // queries total (not five per campaign) — keeps the list off an N+1.
+  async countsMany(ids: string[]): Promise<Map<string, Record<string, number>>> {
+    const zero = () => ({ SENT: 0, OPENED: 0, CLICKED: 0, SUBMITTED: 0, REPORTED: 0 });
+    const map = new Map(ids.map((id) => [id, zero()]));
+    if (ids.length === 0) return map;
+    const SENT_RANK = [ResultStatus.SENT, ResultStatus.OPENED, ResultStatus.CLICKED, ResultStatus.SUBMITTED];
+    const byCampaign = (where: Record<string, unknown>) =>
+      this.prisma.campaignResult.groupBy({ by: ['campaignId'], where: { campaignId: { in: ids }, ...where }, _count: { _all: true } });
+    const [sent, opened, clicked, submitted, reported] = await this.prisma.$transaction([
+      byCampaign({ status: { in: SENT_RANK } }),
+      byCampaign({ events: { some: { type: 'OPENED' } } }),
+      byCampaign({ events: { some: { type: 'CLICKED' } } }),
+      byCampaign({ events: { some: { type: 'SUBMITTED' } } }),
+      byCampaign({ reported: true }),
+    ]);
+    const apply = (rows: Array<{ campaignId: string; _count: { _all: number } }>, key: keyof ReturnType<typeof zero>) => {
+      for (const r of rows) { const c = map.get(r.campaignId); if (c) c[key] = r._count._all; }
+    };
+    apply(sent, 'SENT'); apply(opened, 'OPENED'); apply(clicked, 'CLICKED'); apply(submitted, 'SUBMITTED'); apply(reported, 'REPORTED');
+    return map;
   }
 
   async launch(id: string): Promise<Campaign> {

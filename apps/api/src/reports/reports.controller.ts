@@ -31,19 +31,28 @@ export class ReportsController {
   @Get('campaigns/:id/export/results.csv')
   @UseGuards(SessionGuard)
   async resultsCsv(@Param('id') id: string, @Res() res: Response): Promise<void> {
-    const csv = await this.reports.resultsCsv(id);
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="campaign-${id}-results.csv"`);
-    res.send(csv);
+    await this.stream(res, `campaign-${id}-results.csv`, this.reports.resultsCsvRows(id));
   }
 
   @Get('campaigns/:id/export/events.csv')
   @UseGuards(SessionGuard)
   async eventsCsv(@Param('id') id: string, @Res() res: Response): Promise<void> {
-    const csv = await this.reports.eventsCsv(id);
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="campaign-${id}-events.csv"`);
-    res.send(csv);
+    await this.stream(res, `campaign-${id}-events.csv`, this.reports.eventsCsvRows(id));
+  }
+
+  // Pipe batches to the client with backpressure. The existence check runs
+  // before the first chunk, so a 404 still surfaces as JSON (nothing written).
+  private async stream(res: Response, filename: string, rows: AsyncGenerator<string>): Promise<void> {
+    let started = false;
+    for await (const chunk of rows) {
+      if (!started) {
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        started = true;
+      }
+      if (!res.write(chunk)) await new Promise<void>((resolve) => res.once('drain', resolve));
+    }
+    res.end();
   }
 
   // Public read-only report, resolved by unguessable code. No admin data.

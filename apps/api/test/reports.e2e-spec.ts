@@ -51,7 +51,7 @@ describe('reports (e2e)', () => {
     const results = await agent.get(`/api/campaigns/${campaignId}/export/results.csv`);
     expect(results.headers['content-type']).toContain('text/csv');
     expect(results.text.split('\n')[0]).toContain('Email');
-    expect(results.text.split('\n')).toHaveLength(2); // header + 1 target
+    expect(results.text.trimEnd().split('\n')).toHaveLength(2); // header + 1 target
     const events = await agent.get(`/api/campaigns/${campaignId}/export/events.csv`);
     expect(events.text.split('\n')[0]).toContain('Type');
   });
