@@ -18,7 +18,7 @@ class FakeMailer implements Mailer {
 
 describe('SendProcessor.deliver', () => {
   const prisma = new PrismaService();
-  const render = new RenderService({ PUBLIC_BASE_URL: 'https://pub.example.com', SESSION_SECRET: 'test-secret-session-key-123456' } as never);
+  const render = new RenderService({ SESSION_SECRET: 'test-secret-session-key-123456' } as never);
 
   beforeAll(async () => { await prisma.$connect(); });
   afterEach(async () => {
