@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SuppressionService } from '../suppression/suppression.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
+import { ConfigStoreService } from '../config-store/config.service';
 import { safeStringEqual } from '../auth/crypto.util';
 
 @Injectable()
@@ -12,7 +13,8 @@ export class WebhooksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly suppression: SuppressionService,
-    @Inject(ENV) private readonly env: Pick<Env, 'SESSION_SECRET' | 'PUBLIC_BASE_URL'>,
+    @Inject(ENV) private readonly env: Pick<Env, 'SESSION_SECRET'>,
+    private readonly config: ConfigStoreService,
   ) {}
 
   private readonly logger = new Logger(WebhooksService.name);
@@ -35,8 +37,8 @@ export class WebhooksService {
     return this.url(generated);
   }
 
-  url(secret: string): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/webhooks/suppress?token=${secret}`;
+  async url(secret: string): Promise<string> {
+    return `${await this.config.publicBaseUrl()}/api/webhooks/suppress?token=${secret}`;
   }
 
   async verify(token: string | undefined): Promise<boolean> {

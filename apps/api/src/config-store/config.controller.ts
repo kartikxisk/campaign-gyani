@@ -11,6 +11,7 @@ const configSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   timezone: z.string().min(1).max(64).refine(isTimeZone, 'Unknown IANA timezone').optional(),
   emailFooter: z.string().max(2000).optional(),
+  publicBaseUrl: z.string().trim().url().or(z.literal('')).optional(),
 });
 
 function isTimeZone(tz: string): boolean {

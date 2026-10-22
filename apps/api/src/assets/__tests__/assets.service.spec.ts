@@ -8,7 +8,8 @@ import { AssetsService } from '../assets.service';
 describe('AssetsService', () => {
   const prisma = new PrismaService();
   const dir = mkdtempSync(join(tmpdir(), 'cg-assets-'));
-  const service = new AssetsService(prisma, { ASSET_DIR: dir, PUBLIC_BASE_URL: 'http://localhost:8099' } as any);
+  const config = { publicBaseUrl: async () => 'http://localhost:8099' } as any;
+  const service = new AssetsService(prisma, { ASSET_DIR: dir } as any, config);
 
   beforeAll(async () => {
     await prisma.$connect();

@@ -14,7 +14,7 @@ export class WebhooksController {
   @Get('token')
   @UseGuards(SessionGuard)
   async info(): Promise<{ url: string }> {
-    return { url: this.service.url(await this.service.secret()) };
+    return { url: await this.service.url(await this.service.secret()) };
   }
 
   @Post('rotate')

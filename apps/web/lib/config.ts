@@ -9,6 +9,7 @@ export interface AppConfig {
   primaryColor: string;
   timezone: string;
   emailFooter: string;
+  publicBaseUrl: string;
 }
 
 export function useConfig() {
@@ -17,5 +18,5 @@ export function useConfig() {
     queryFn: () => api.get<AppConfig>('/config'),
     staleTime: 5 * 60 * 1000,
   });
-  return q.data ?? { brandName: 'Campaign-Gyani', logoUrl: null, faviconUrl: null, primaryColor: '#0891b2', timezone: 'UTC', emailFooter: '' };
+  return q.data ?? { brandName: 'Campaign-Gyani', logoUrl: null, faviconUrl: null, primaryColor: '#0891b2', timezone: 'UTC', emailFooter: '', publicBaseUrl: '' };
 }

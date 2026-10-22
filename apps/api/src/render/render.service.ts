@@ -30,19 +30,19 @@ function safeUrl(v: string): string {
 
 @Injectable()
 export class RenderService {
-  constructor(@Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>) {}
+  constructor(@Inject(ENV) private readonly env: Pick<Env, 'SESSION_SECRET'>) {}
 
   /** The tracked click URL that records a CLICK then redirects to the landing page. */
-  clickUrl(rid: string): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/t/c/${rid}`;
+  clickUrl(base: string, rid: string): string {
+    return `${base}/api/t/c/${rid}`;
   }
 
-  openPixelUrl(rid: string): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/t/o/${rid}`;
+  openPixelUrl(base: string, rid: string): string {
+    return `${base}/api/t/o/${rid}`;
   }
 
-  unsubscribeUrl(rid: string): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/t/u/${rid}`;
+  unsubscribeUrl(base: string, rid: string): string {
+    return `${base}/api/t/u/${rid}`;
   }
 
   /** Replaces supported tokens with their context value; unknown/missing → empty. */
@@ -62,16 +62,16 @@ export class RenderService {
     return hmacSign(`${rid}|${url}`, this.env.SESSION_SECRET);
   }
 
-  rewriteLinks(html: string, rid: string): string {
+  rewriteLinks(base: string, html: string, rid: string): string {
     return html.replace(/(<a\b[^>]*?\bhref=)(["'])(.*?)\2/gi, (_m, pre: string, q: string, href: string) => {
-      const tracked = `${this.clickUrl(rid)}?u=${encodeURIComponent(href)}&s=${this.signUrl(rid, href)}`;
+      const tracked = `${this.clickUrl(base, rid)}?u=${encodeURIComponent(href)}&s=${this.signUrl(rid, href)}`;
       return `${pre}${q}${tracked}${q}`;
     });
   }
 
   /** Appends a single 1x1 open-tracking pixel, before </body> when present. */
-  injectPixel(html: string, rid: string): string {
-    const pixel = `<img src="${this.openPixelUrl(rid)}" width="1" height="1" style="display:none" alt=""/>`;
+  injectPixel(base: string, html: string, rid: string): string {
+    const pixel = `<img src="${this.openPixelUrl(base, rid)}" width="1" height="1" style="display:none" alt=""/>`;
     if (/<\/body>/i.test(html)) {
       return html.replace(/<\/body>/i, `${pixel}</body>`);
     }
@@ -79,9 +79,9 @@ export class RenderService {
   }
 
   /** Full render for one recipient: fill tokens (URL set to the tracked link), rewrite links, inject pixel. */
-  renderForRecipient(html: string, ctx: MergeContext, rid: string): string {
-    const withUrl: MergeContext = { ...ctx, URL: this.clickUrl(rid), UnsubscribeURL: this.unsubscribeUrl(rid) };
+  renderForRecipient(base: string, html: string, ctx: MergeContext, rid: string): string {
+    const withUrl: MergeContext = { ...ctx, URL: this.clickUrl(base, rid), UnsubscribeURL: this.unsubscribeUrl(base, rid) };
     const filled = this.renderTemplate(html, withUrl);
-    return this.injectPixel(this.rewriteLinks(filled, rid), rid);
+    return this.injectPixel(base, this.rewriteLinks(base, filled, rid), rid);
   }
 }

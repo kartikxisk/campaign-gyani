@@ -6,6 +6,7 @@ import { hmacSign, safeStringEqual } from '../auth/crypto.util';
 import { SuppressionService } from '../suppression/suppression.service';
 import { ENV } from '../config/config.module';
 import type { Env } from '../config/env';
+import { ConfigStoreService } from '../config-store/config.service';
 
 const RANK: Record<string, number> = {
   SCHEDULED: 0, SENDING: 1, SENT: 2, OPENED: 3, CLICKED: 4, SUBMITTED: 5, ERROR: -1, REPORTED: 2,
@@ -22,7 +23,8 @@ export class TrackingService {
     private readonly prisma: PrismaService,
     private readonly render: RenderService,
     private readonly suppression: SuppressionService,
-    @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL' | 'SESSION_SECRET'>,
+    @Inject(ENV) private readonly env: Pick<Env, 'SESSION_SECRET'>,
+    private readonly config: ConfigStoreService,
   ) {}
 
   private async bump(resultId: string, current: string, target: ResultStatus): Promise<void> {
@@ -56,9 +58,9 @@ export class TrackingService {
       ) {
         return originalUrl;
       }
-      return this.env.PUBLIC_BASE_URL;
+      return this.config.publicBaseUrl();
     }
-    return `${this.env.PUBLIC_BASE_URL}/v/${rid}`;
+    return `${await this.config.publicBaseUrl()}/v/${rid}`;
   }
 
   async getLandingView(rid: string): Promise<{ html: string }> {
@@ -66,7 +68,7 @@ export class TrackingService {
     if (!result || result.campaign.type === 'email' || !result.campaign.landingPage) throw new NotFoundException();
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position };
     const filled = this.render.renderTemplate(result.campaign.landingPage.html, ctx);
-    const action = `${this.env.PUBLIC_BASE_URL}/api/t/s/${rid}`;
+    const action = `${await this.config.publicBaseUrl()}/api/t/s/${rid}`;
     // Point every form at the submit endpoint.
     const html = filled.replace(/<form\b([^>]*)>/gi, (m, attrs: string) => {
       const cleaned = attrs.replace(/\saction=(["']).*?\1/gi, '').replace(/\smethod=(["']).*?\1/gi, '');

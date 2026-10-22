@@ -5,6 +5,7 @@ import { join, resolve, basename } from 'node:path';
 import type { Asset } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ENV } from '../config/config.module';
+import { ConfigStoreService } from '../config-store/config.service';
 import type { Env } from '../config/env';
 import { extForUpload } from './mime';
 
@@ -21,15 +22,12 @@ export type AssetWithUrl = Asset & { url: string };
 export class AssetsService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(ENV) private readonly env: Pick<Env, 'ASSET_DIR' | 'PUBLIC_BASE_URL'>,
+    @Inject(ENV) private readonly env: Pick<Env, 'ASSET_DIR'>,
+    private readonly config: ConfigStoreService,
   ) {}
 
-  private url(filename: string): string {
-    return `${this.env.PUBLIC_BASE_URL}/api/assets/file/${filename}`;
-  }
-
-  private withUrl(asset: Asset): AssetWithUrl {
-    return { ...asset, url: this.url(asset.filename) };
+  private withUrl(base: string, asset: Asset): AssetWithUrl {
+    return { ...asset, url: `${base}/api/assets/file/${asset.filename}` };
   }
 
   async saveFile(buffer: Buffer, meta: SaveFileMeta): Promise<AssetWithUrl> {
@@ -46,12 +44,13 @@ export class AssetsService {
     const asset = await this.prisma.asset.create({
       data: { filename, path: join(this.env.ASSET_DIR, filename), mimetype: meta.mimetype, size: buffer.length, kind: meta.kind },
     });
-    return this.withUrl(asset);
+    return this.withUrl(await this.config.publicBaseUrl(), asset);
   }
 
   async list(): Promise<AssetWithUrl[]> {
     const rows = await this.prisma.asset.findMany({ orderBy: { createdAt: 'desc' } });
-    return rows.map((a) => this.withUrl(a));
+    const base = await this.config.publicBaseUrl();
+    return rows.map((a) => this.withUrl(base, a));
   }
 
   async deleteFile(id: string): Promise<void> {

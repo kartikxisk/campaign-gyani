@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { RenderService } from '../render.service';
 
 const svc = new RenderService({ PUBLIC_BASE_URL: 'https://pub.example.com', SESSION_SECRET: 'test-secret-session-key-123456' } as any);
+const BASE = 'https://pub.example.com';
 const ctx = { FirstName: 'Ada', LastName: 'Lovelace', Email: 'ada@corp.com', Position: 'Engineer', URL: 'https://pub.example.com/api/t/c/RID1', ExternalURL: 'https://evil.test/x' };
 
 describe('renderTemplate', () => {
@@ -34,7 +35,7 @@ describe('renderTemplate', () => {
 
 describe('rewriteLinks', () => {
   it('points anchors at the tracked click URL while keeping the anchor text', () => {
-    const out = svc.rewriteLinks('<a href="https://bank.test/login">Sign in</a>', 'RID1');
+    const out = svc.rewriteLinks(BASE, '<a href="https://bank.test/login">Sign in</a>', 'RID1');
     expect(out).toContain('https://pub.example.com/api/t/c/RID1');
     expect(out).toContain('>Sign in</a>');
     expect(out).toContain(encodeURIComponent('https://bank.test/login'));
@@ -43,14 +44,14 @@ describe('rewriteLinks', () => {
 
 describe('rewriteLinks signature', () => {
   it('appends a signature parameter to the tracked link', () => {
-    const out = svc.rewriteLinks('<a href="https://bank.test/login">go</a>', 'RID1');
+    const out = svc.rewriteLinks(BASE, '<a href="https://bank.test/login">go</a>', 'RID1');
     expect(out).toMatch(/[?&]s=[a-f0-9]{8,}/);
   });
 });
 
 describe('injectPixel', () => {
   it('appends exactly one tracking pixel pointing at the open endpoint', () => {
-    const out = svc.injectPixel('<html><body><p>hi</p></body></html>', 'RID1');
+    const out = svc.injectPixel(BASE, '<html><body><p>hi</p></body></html>', 'RID1');
     const matches = out.match(/\/api\/t\/o\/RID1/g) ?? [];
     expect(matches).toHaveLength(1);
     expect(out).toContain('<img');
@@ -59,6 +60,6 @@ describe('injectPixel', () => {
 
 describe('clickUrl', () => {
   it('builds the landing click URL for the rid', () => {
-    expect(svc.clickUrl('RID1')).toBe('https://pub.example.com/api/t/c/RID1');
+    expect(svc.clickUrl(BASE, 'RID1')).toBe('https://pub.example.com/api/t/c/RID1');
   });
 });

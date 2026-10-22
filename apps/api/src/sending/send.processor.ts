@@ -68,12 +68,13 @@ export class SendProcessor {
 
     await this.prisma.campaignResult.update({ where: { id: resultId }, data: { status: ResultStatus.SENDING } });
 
+    const base = await this.config.publicBaseUrl();
     const ctx = { FirstName: result.firstName, LastName: result.lastName, Email: result.email, Position: result.position, ExternalURL: template.externalUrl ?? '' };
-    let html = this.render.renderForRecipient(template.htmlBody, ctx, result.rid);
-    const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(result.rid) });
+    let html = this.render.renderForRecipient(base, template.htmlBody, ctx, result.rid);
+    const subject = this.render.renderTemplate(template.subject, { ...ctx, URL: this.render.clickUrl(base, result.rid) });
     // Email mode requires an unsubscribe link; inject a footer if the author left one out.
     if (mode === 'email' && !html.includes('/api/t/u/')) {
-      const url = this.render.unsubscribeUrl(result.rid);
+      const url = this.render.unsubscribeUrl(base, result.rid);
       html += `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e7ee;font:12px system-ui,sans-serif;color:#7a8798">Don't want these emails? <a href="${url}" style="color:#0891b2">Unsubscribe</a>.</div>`;
     }
     const cfg = await this.config.get();

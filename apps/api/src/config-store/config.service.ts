@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ENV } from '../config/config.module';
+import type { Env } from '../config/env';
 
 export interface AppConfig {
   brandName: string;
@@ -8,6 +10,9 @@ export interface AppConfig {
   primaryColor: string;
   timezone: string;
   emailFooter: string;
+  // Base URL victim-facing links are built from (tracking, landing, assets).
+  // Empty means "use the PUBLIC_BASE_URL env default".
+  publicBaseUrl: string;
 }
 
 const DEFAULTS: AppConfig = {
@@ -17,11 +22,21 @@ const DEFAULTS: AppConfig = {
   primaryColor: '#0891b2',
   timezone: 'UTC',
   emailFooter: '',
+  publicBaseUrl: '',
 };
 
 @Injectable()
 export class ConfigStoreService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ENV) private readonly env: Pick<Env, 'PUBLIC_BASE_URL'>,
+  ) {}
+
+  /** The effective public base URL: the admin override if set, else the env default. No trailing slash. */
+  async publicBaseUrl(): Promise<string> {
+    const override = (await this.get()).publicBaseUrl.trim();
+    return (override || this.env.PUBLIC_BASE_URL).replace(/\/+$/, '');
+  }
 
   async get(): Promise<AppConfig> {
     const row = await this.prisma.appSetting.findUnique({ where: { id: 'app' } });
