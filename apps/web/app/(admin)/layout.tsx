@@ -3,24 +3,21 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
+import { ConsoleLoading } from '@/components/shell/ConsoleLoading';
 import { useMe } from '@/lib/auth';
 import { ViewModeProvider } from '@/lib/view-mode';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { data: me, isLoading } = useMe();
+  const { data: me, isPending, isError } = useMe();
 
+  // No session, or /me failed — send to login. (isError covers API/network
+  // failures so the loader can never hang indefinitely.)
   useEffect(() => {
-    if (!isLoading && me === null) router.replace('/login');
-  }, [isLoading, me, router]);
+    if (!isPending && (me === null || isError)) router.replace('/login');
+  }, [isPending, me, isError, router]);
 
-  if (isLoading || !me) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-deck text-sm text-deck-muted">
-        <span className="animate-pulse">Loading console…</span>
-      </div>
-    );
-  }
+  if (!me) return <ConsoleLoading redirecting={!isPending} />;
 
 
   return (
